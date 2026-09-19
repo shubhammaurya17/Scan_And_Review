@@ -16,10 +16,14 @@ interface BusinessFormState {
   ownerName: string;
   ownerPassword: string;
   isDemo: boolean;
+  googlePlaceId: string;
+  googleReviewUrl: string;
+  googleMapsUrl: string;
 }
 
 const emptyForm: BusinessFormState = {
   name: '', slug: '', categoryId: '', ownerEmail: '', ownerName: '', ownerPassword: '', isDemo: false,
+  googlePlaceId: '', googleReviewUrl: '', googleMapsUrl: '',
 };
 
 export function BusinessManagementPage() {
@@ -57,6 +61,9 @@ export function BusinessManagementPage() {
       ownerName: '',
       ownerPassword: '',
       isDemo: b.isDemo,
+      googlePlaceId: b.googlePlaceId || '',
+      googleReviewUrl: b.googleReviewUrl || '',
+      googleMapsUrl: b.googleMapsUrl || '',
     });
     setShowForm(true);
   };
@@ -72,6 +79,9 @@ export function BusinessManagementPage() {
           slug: form.slug,
           categoryId: form.categoryId || undefined,
           isDemo: form.isDemo,
+          googlePlaceId: form.googlePlaceId || undefined,
+          googleReviewUrl: form.googleReviewUrl || undefined,
+          googleMapsUrl: form.googleMapsUrl || undefined,
         });
       } else {
         await adminApi.createBusiness({
@@ -82,6 +92,9 @@ export function BusinessManagementPage() {
           ownerName: form.ownerName || undefined,
           ownerPassword: form.ownerPassword || undefined,
           isDemo: form.isDemo,
+          googlePlaceId: form.googlePlaceId || undefined,
+          googleReviewUrl: form.googleReviewUrl || undefined,
+          googleMapsUrl: form.googleMapsUrl || undefined,
         });
       }
       invalidate();
@@ -221,6 +234,24 @@ export function BusinessManagementPage() {
                   <Input label="Owner Password" type="password" value={form.ownerPassword} onChange={(e) => setForm({ ...form, ownerPassword: e.target.value })} />
                 </>
               )}
+              <Input
+                label="Google Place ID"
+                value={form.googlePlaceId}
+                onChange={e => setForm(f => ({ ...f, googlePlaceId: e.target.value }))}
+                placeholder="ChIJ..."
+              />
+              <Input
+                label="Google Review URL"
+                value={form.googleReviewUrl}
+                onChange={e => setForm(f => ({ ...f, googleReviewUrl: e.target.value }))}
+                placeholder="https://search.google.com/local/writereview?placeid=..."
+              />
+              <Input
+                label="Google Maps URL"
+                value={form.googleMapsUrl}
+                onChange={e => setForm(f => ({ ...f, googleMapsUrl: e.target.value }))}
+                placeholder="https://maps.google.com/..."
+              />
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={form.isDemo} onChange={(e) => setForm({ ...form, isDemo: e.target.checked })} />
                 Demo business

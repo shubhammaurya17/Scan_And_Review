@@ -6,7 +6,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { GripVertical, Pencil, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
+import { ChevronUp, ChevronDown, Pencil, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
 
 export function QuestionBuilderPage() {
   const { currentBusiness } = useAuth();
@@ -49,6 +49,21 @@ export function QuestionBuilderPage() {
   const handleAddQuestion = () => {
     if (newQuestion.trim() && activeCount < 5) {
       createMutation.mutate(newQuestion.trim());
+    }
+  };
+
+  const handleMoveQuestion = async (currentIndex: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= questions.length) return;
+
+    const newOrder = [...questions];
+    [newOrder[currentIndex], newOrder[newIndex]] = [newOrder[newIndex], newOrder[currentIndex]];
+
+    try {
+      await businessApi.reorderQuestions(businessId, newOrder.map((q: any) => q.id));
+      queryClient.invalidateQueries({ queryKey: ['questions', businessId] });
+    } catch (err) {
+      console.error('Reorder failed:', err);
     }
   };
 
@@ -97,7 +112,24 @@ export function QuestionBuilderPage() {
           {questions.map((q: any, index: number) => (
             <Card key={q.id}>
               <CardContent className="flex items-center gap-3">
-                <GripVertical size={16} className="text-gray-400 cursor-grab" />
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => handleMoveQuestion(index, 'up')}
+                    disabled={index === 0}
+                    className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move up"
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleMoveQuestion(index, 'down')}
+                    disabled={index === questions.length - 1}
+                    className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move down"
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
                 <span className="text-sm text-gray-400 w-6">{index + 1}.</span>
 
                 {editingId === q.id ? (

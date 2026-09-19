@@ -55,8 +55,41 @@ export class TemplateService implements IAIService {
     ];
   }
 
-  async generateReply(review: string, businessName: string, _tone: string): Promise<string> {
-    return `Thank you for taking the time to share your feedback about ${businessName}. We appreciate your input and will use it to improve our service.`;
+  async generateReply(review: string, businessName: string, tone: string): Promise<string> {
+    const isPositive = /great|excellent|amazing|love|wonderful|fantastic|best|good|enjoyed|impressed/i.test(review);
+    const isNegative = /bad|terrible|awful|worst|horrible|disappointed|poor|slow|rude|dirty|cold/i.test(review);
+    const sentiment = isNegative ? 'negative' : isPositive ? 'positive' : 'neutral';
+
+    const templates: Record<string, Record<string, string>> = {
+      PROFESSIONAL: {
+        positive: `Thank you for your positive feedback about ${businessName}. We are delighted to hear about your experience and remain committed to maintaining these high standards. We look forward to welcoming you again.`,
+        negative: `Thank you for sharing your concerns regarding ${businessName}. We take all feedback seriously and are reviewing the issues you've raised. Please don't hesitate to contact us directly so we can address this properly.`,
+        neutral: `Thank you for your review of ${businessName}. We value your feedback and continuously strive to improve our offerings. We hope to see you again soon.`,
+      },
+      FRIENDLY: {
+        positive: `So glad you had a great time at ${businessName}! 😊 Thanks for the kind words — it really means a lot to our team. Can't wait to see you again!`,
+        negative: `Oh no, we're sorry to hear that your visit to ${businessName} didn't meet expectations! That's definitely not what we aim for. We'd love a chance to make it right — please reach out to us!`,
+        neutral: `Thanks for stopping by ${businessName} and sharing your thoughts! We appreciate the feedback and are always looking for ways to do better. Hope to see you again soon!`,
+      },
+      GRATEFUL: {
+        positive: `We are truly grateful for your wonderful review of ${businessName}! Your kind words inspire our team to keep delivering the best experience possible. Thank you for your support!`,
+        negative: `We sincerely appreciate you taking the time to share your experience at ${businessName}. We're grateful for honest feedback as it helps us grow. We want to make this right — please give us another chance.`,
+        neutral: `Thank you so much for reviewing ${businessName}! We're grateful for every piece of feedback we receive. Your thoughts help us become better every day.`,
+      },
+      APOLOGETIC: {
+        positive: `Thank you for your generous review of ${businessName}! We're glad everything went well, and we apologize if anything was less than perfect. We always strive to exceed expectations.`,
+        negative: `We sincerely apologize for the experience you had at ${businessName}. This falls short of our standards and we take full responsibility. We would like to make it up to you — please contact us directly.`,
+        neutral: `Thank you for your feedback about ${businessName}. We apologize if any aspect of your experience could have been better. We are committed to continuous improvement.`,
+      },
+      CONCISE: {
+        positive: `Thanks for the great review! We're glad you enjoyed ${businessName}. See you again soon.`,
+        negative: `Sorry about your experience at ${businessName}. We'll do better. Please reach out so we can make it right.`,
+        neutral: `Thanks for your feedback about ${businessName}. We appreciate it and will keep improving.`,
+      },
+    };
+
+    const toneTemplates = templates[tone.toUpperCase()] || templates.PROFESSIONAL;
+    return toneTemplates[sentiment];
   }
 
   async analyzeSentiment(text: string): Promise<SentimentResult> {

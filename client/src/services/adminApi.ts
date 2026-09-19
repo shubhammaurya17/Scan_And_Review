@@ -1,7 +1,7 @@
 import api from './api';
 
 export const adminApi = {
-  getStats: () => api.get('/admin/stats'),
+  getStats: (excludeDemo = false) => api.get('/admin/stats', { params: { excludeDemo } }),
   getHealth: () => api.get('/admin/health'),
   getAIConfig: () => api.get('/admin/ai/config'),
 

@@ -20,6 +20,7 @@ export function GoogleConnectionPage() {
     queryKey: ['google-status', businessId],
     queryFn: () => googleApi.getConnectionStatus(businessId).then(r => r.data.data),
     enabled: !!businessId,
+    refetchInterval: (query) => (query.state.data?.status === 'SYNCING' ? 3000 : 30000),
   });
 
   const showToast = (type: 'success' | 'error', message: string) => {
@@ -77,10 +78,12 @@ export function GoogleConnectionPage() {
   const status = data?.status || 'DISCONNECTED';
   const isConfigured = data?.isConfigured !== false;
 
-  const statusMeta: Record<string, { emoji: string; label: string; badge: 'success' | 'danger' | 'warning' }> = {
+  const statusMeta: Record<string, { emoji: string; label: string; badge: 'success' | 'danger' | 'warning' | 'default' }> = {
     CONNECTED: { emoji: '🟢', label: 'Connected', badge: 'success' },
     DISCONNECTED: { emoji: '🔴', label: 'Disconnected', badge: 'danger' },
     EXPIRED: { emoji: '🟡', label: 'Expired', badge: 'warning' },
+    SYNCING: { emoji: '🔵', label: 'Syncing...', badge: 'default' },
+    SYNC_ERROR: { emoji: '⚠️', label: 'Sync Error', badge: 'danger' },
   };
   const meta = statusMeta[status] || statusMeta.DISCONNECTED;
 
@@ -121,14 +124,27 @@ export function GoogleConnectionPage() {
             </div>
           </div>
 
+          {status === 'SYNC_ERROR' && data?.syncError && (
+            <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">
+              <strong>Last sync error:</strong> {data.syncError}
+            </div>
+          )}
+
           {!isConfigured ? (
             <div className="bg-amber-50 text-amber-700 text-sm p-3 rounded-lg">
               Google OAuth is not configured on this server. Contact your administrator.
             </div>
-          ) : status === 'CONNECTED' ? (
+          ) : status === 'CONNECTED' || status === 'SYNCING' || status === 'SYNC_ERROR' ? (
             <div className="flex gap-2">
-              <Button variant="primary" size="sm" isLoading={isSyncing} onClick={handleSync}>
-                <RefreshCw size={16} className="mr-1.5" /> Sync Now
+              <Button
+                variant="primary"
+                size="sm"
+                isLoading={isSyncing || status === 'SYNCING'}
+                disabled={status === 'SYNCING'}
+                onClick={handleSync}
+              >
+                <RefreshCw size={16} className="mr-1.5" />
+                {status === 'SYNCING' ? 'Syncing...' : status === 'SYNC_ERROR' ? 'Retry Sync' : 'Sync Now'}
               </Button>
               <Button variant="outline" size="sm" isLoading={isDisconnecting} onClick={handleDisconnect}>
                 <Unlink size={16} className="mr-1.5" /> Disconnect

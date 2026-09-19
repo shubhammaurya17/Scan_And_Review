@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../../services/adminApi';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -5,9 +6,11 @@ import { Badge } from '../../components/ui/Badge';
 import { Building2, Users, Activity, FolderTree, Database, Bot, Link2 } from 'lucide-react';
 
 export function AdminDashboardPage() {
+  const [excludeDemo, setExcludeDemo] = useState(true);
+
   const { data: stats } = useQuery({
-    queryKey: ['admin-stats'],
-    queryFn: () => adminApi.getStats().then(r => r.data.data),
+    queryKey: ['admin-stats', excludeDemo],
+    queryFn: () => adminApi.getStats(excludeDemo).then(r => r.data.data),
   });
 
   const { data: health } = useQuery({
@@ -24,9 +27,20 @@ export function AdminDashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-500 text-sm">Platform-wide overview and system health</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-500 text-sm">Platform-wide overview and system health</p>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={excludeDemo}
+            onChange={(e) => setExcludeDemo(e.target.checked)}
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          Exclude demo data
+        </label>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

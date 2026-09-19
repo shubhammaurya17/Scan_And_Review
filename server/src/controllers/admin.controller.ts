@@ -63,15 +63,21 @@ export class AdminController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = parseInt(req.query.pageSize as string) || 50;
+      const isDemoFilter = req.query.isDemo;
+
+      const where: any = {};
+      if (isDemoFilter === 'true') where.isDemo = true;
+      else if (isDemoFilter === 'false') where.isDemo = false;
 
       const [businesses, total] = await Promise.all([
         prisma.business.findMany({
+          where,
           include: { category: true, members: { include: { user: true }, take: 1 }, _count: { select: { sessions: true, questions: true } } },
           orderBy: { createdAt: 'desc' },
           skip: (page - 1) * pageSize,
           take: pageSize,
         }),
-        prisma.business.count(),
+        prisma.business.count({ where }),
       ]);
 
       res.json({
@@ -92,11 +98,11 @@ export class AdminController {
 
   async createBusiness(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, slug, categoryId, isDemo, description, address, phone, website, ownerEmail, ownerName, ownerPassword } = req.body;
+      const { name, slug, categoryId, isDemo, description, address, phone, website, ownerEmail, ownerName, ownerPassword, googlePlaceId, googleReviewUrl, googleMapsUrl } = req.body;
 
       const result = await prisma.$transaction(async (tx) => {
         const business = await tx.business.create({
-          data: { name, slug, categoryId, isDemo: isDemo || false, description, address, phone, website },
+          data: { name, slug, categoryId, isDemo: isDemo || false, description, address, phone, website, googlePlaceId, googleReviewUrl, googleMapsUrl },
         });
 
         // If owner details provided, create user and link
@@ -256,12 +262,16 @@ export class AdminController {
   }
 
   // Stats for admin dashboard
-  async getStats(_req: Request, res: Response, next: NextFunction) {
+  async getStats(req: Request, res: Response, next: NextFunction) {
     try {
+      const excludeDemo = req.query.excludeDemo === 'true';
+      const businessWhere = excludeDemo ? { isDemo: false } : {};
+      const sessionWhere = excludeDemo ? { business: { isDemo: false } } : {};
+
       const [businessCount, userCount, sessionCount, categoryCount] = await Promise.all([
-        prisma.business.count(),
+        prisma.business.count({ where: businessWhere }),
         prisma.user.count(),
-        prisma.reviewSession.count(),
+        prisma.reviewSession.count({ where: sessionWhere }),
         prisma.category.count(),
       ]);
       res.json({ success: true, data: { businessCount, userCount, sessionCount, categoryCount } });

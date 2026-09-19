@@ -110,6 +110,7 @@ export class GoogleService {
         status: 'DISCONNECTED',
         isConfigured: this.isConfigured(),
         lastSyncAt: null,
+        syncError: null,
       };
     }
 
@@ -127,7 +128,73 @@ export class GoogleService {
       status,
       isConfigured: this.isConfigured(),
       lastSyncAt: conn.lastSyncAt,
+      syncError: conn.syncError || null,
     };
+  }
+
+  async refreshAccessToken(businessId: string): Promise<string> {
+    const conn = await prisma.googleConnection.findUnique({ where: { businessId } });
+    if (!conn?.refreshToken) {
+      await prisma.googleConnection.update({
+        where: { businessId },
+        data: { status: 'EXPIRED' },
+      });
+      throw new AppError('No refresh token available — please reconnect Google', 401);
+    }
+
+    try {
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          refresh_token: conn.refreshToken,
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          grant_type: 'refresh_token',
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        await prisma.googleConnection.update({
+          where: { businessId },
+          data: { status: 'EXPIRED' },
+        });
+        throw new AppError('Token refresh failed — please reconnect Google', 401);
+      }
+
+      const tokens = await tokenRes.json() as { access_token: string; expires_in: number };
+      const tokenExpiry = new Date(Date.now() + tokens.expires_in * 1000);
+
+      await prisma.googleConnection.update({
+        where: { businessId },
+        data: {
+          accessToken: tokens.access_token,
+          tokenExpiry,
+          status: 'CONNECTED',
+        },
+      });
+
+      return tokens.access_token;
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      throw new AppError('Failed to refresh Google token', 500);
+    }
+  }
+
+  async getValidAccessToken(businessId: string): Promise<string> {
+    const conn = await prisma.googleConnection.findUnique({ where: { businessId } });
+    if (!conn || conn.status === 'DISCONNECTED') {
+      throw new AppError('Google Business Profile is not connected', 400);
+    }
+    if (!conn.accessToken) {
+      throw new AppError('No access token — please reconnect Google', 401);
+    }
+    // If token is still valid (with 5-minute buffer), return it
+    if (conn.tokenExpiry && conn.tokenExpiry > new Date(Date.now() + 5 * 60 * 1000)) {
+      return conn.accessToken;
+    }
+    // Otherwise refresh
+    return this.refreshAccessToken(businessId);
   }
 }
 

@@ -12,7 +12,7 @@ export const updateQuestionSchema = z.object({
 });
 
 export const reorderQuestionsSchema = z.object({
-  questionIds: z.array(z.string().uuid()),
+  questionIds: z.array(z.string().min(1)),
 });
 
 export const updateBusinessSchema = z.object({
@@ -20,8 +20,8 @@ export const updateBusinessSchema = z.object({
   description: z.string().max(500).optional(),
   address: z.string().optional(),
   phone: z.string().optional(),
-  website: z.string().url().optional(),
-  googleReviewUrl: z.string().url().optional(),
-  googleMapsUrl: z.string().url().optional(),
+  website: z.string().optional(),
+  googleReviewUrl: z.string().optional(),
+  googleMapsUrl: z.string().optional(),
   googlePlaceId: z.string().optional(),
 });

@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
+// IDs are CUIDs (from Prisma @default(cuid())), not UUIDs
+// sessionToken is UUID (generated with uuid v4)
 export const submitFeedbackSchema = z.object({
   sessionToken: z.string().uuid(),
   ratings: z.array(z.object({
-    questionId: z.string().uuid(),
+    questionId: z.string().min(1),
     rating: z.number().int().min(1).max(5),
   })).min(1),
   comment: z.string().max(500).optional(),
@@ -15,7 +17,7 @@ export const generateDraftsSchema = z.object({
 
 export const selectDraftSchema = z.object({
   sessionToken: z.string().uuid(),
-  draftId: z.string().uuid(),
+  draftId: z.string().min(1),
   editedText: z.string().max(2000).optional(),
 });
 
@@ -24,7 +26,7 @@ export const handoffSchema = z.object({
 });
 
 export const trackEventSchema = z.object({
-  businessId: z.string().uuid(),
+  businessId: z.string().min(1),
   sessionId: z.string().optional(),
   eventType: z.enum([
     'QR_SCANNED', 'PAGE_LOADED', 'SESSION_STARTED',

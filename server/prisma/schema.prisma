@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String           @id @default(uuid())
+  email        String           @unique
+  passwordHash String
+  name         String
+  role         String           @default("BUSINESS_OWNER")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  memberships  BusinessMember[]
+}
+
+model Business {
+  id              String             @id @default(uuid())
+  name            String
+  slug            String             @unique
+  description     String?
+  categoryId      String?
+  address         String?
+  phone           String?
+  website         String?
+  logoUrl         String?
+  googlePlaceId   String?
+  googleReviewUrl String?
+  googleMapsUrl   String?
+  isDemo          Boolean            @default(false)
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  category        Category?          @relation(fields: [categoryId], references: [id])
+  members         BusinessMember[]
+  questions       BusinessQuestion[]
+  sessions        ReviewSession[]
+  funnelEvents    FunnelEvent[]
+  googleConn      GoogleConnection?
+  googleReviews   GoogleReview[]
+  qrConfig        QRConfiguration?
+  alerts          ReputationAlert[]
+  aiAnalyses      AIAnalysis[]
+}
+
+model BusinessMember {
+  id         String   @id @default(uuid())
+  userId     String
+  businessId String
+  role       String   @default("OWNER")
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+}
+
+model Category {
+  id                String             @id @default(uuid())
+  name              String             @unique
+  slug              String             @unique
+  createdAt         DateTime           @default(now())
+  businesses        Business[]
+  questionTemplates QuestionTemplate[]
+}
+
+model QuestionTemplate {
+  id         String   @id @default(uuid())
+  categoryId String
+  text       String
+  sortOrder  Int
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+model BusinessQuestion {
+  id         String             @id @default(uuid())
+  businessId String
+  text       String
+  sortOrder  Int
+  isActive   Boolean            @default(true)
+  createdAt  DateTime           @default(now())
+  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  responses  CustomerResponse[]
+}
+
+model ReviewSession {
+  id           String            @id @default(uuid())
+  businessId   String
+  sessionToken String            @unique @default(uuid())
+  status       String            @default("STARTED")
+  ipHash       String?
+  userAgent    String?
+  completedAt  DateTime?
+  createdAt    DateTime          @default(now())
+  business     Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  responses    CustomerResponse[]
+  feedback     CustomerFeedback?
+  drafts       ReviewDraft[]
+}
+
+model CustomerResponse {
+  id         String           @id @default(uuid())
+  sessionId  String
+  questionId String
+  rating     Int
+  createdAt  DateTime         @default(now())
+  session    ReviewSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question   BusinessQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+}
+
+model CustomerFeedback {
+  id        String        @id @default(uuid())
+  sessionId String        @unique
+  comment   String?
+  createdAt DateTime      @default(now())
+  session   ReviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model ReviewDraft {
+  id         String        @id @default(uuid())
+  sessionId  String
+  style      String
+  content    String
+  isSelected Boolean       @default(false)
+  editedText String?
+  createdAt  DateTime      @default(now())
+  session    ReviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model FunnelEvent {
+  id         String   @id @default(uuid())
+  businessId String
+  sessionId  String?
+  eventType  String
+  metadata   String?
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, eventType])
+  @@index([businessId, createdAt])
+}
+
+model GoogleConnection {
+  id           String   @id @default(uuid())
+  businessId   String   @unique
+  accessToken  String?
+  refreshToken String?
+  tokenExpiry  DateTime?
+  status       String   @default("DISCONNECTED")
+  lastSyncAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model GoogleReview {
+  id          String    @id @default(uuid())
+  businessId  String
+  googleId    String    @unique
+  authorName  String
+  rating      Int
+  comment     String?
+  publishedAt DateTime
+  replyText   String?
+  repliedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  aiReplies   AIReply[]
+}
+
+model AIReply {
+  id        String       @id @default(uuid())
+  reviewId  String
+  tone      String
+  content   String
+  isPosted  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  review    GoogleReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
+
+model AIAnalysis {
+  id          String   @id @default(uuid())
+  businessId  String
+  type        String
+  result      String
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime @default(now())
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, type])
+}
+
+model QRConfiguration {
+  id              String  @id @default(uuid())
+  businessId      String  @unique
+  foregroundColor String  @default("#000000")
+  backgroundColor String  @default("#FFFFFF")
+  logoUrl         String?
+  style           String  @default("SQUARE")
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model ReputationAlert {
+  id         String   @id @default(uuid())
+  businessId String
+  type       String
+  threshold  Int?
+  message    String?
+  isActive   Boolean  @default(true)
+  isRead     Boolean  @default(false)
+  sourceData String?
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, isRead])
+}

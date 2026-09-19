@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { alertApi } from '../../services/alertApi';
 import {
   LayoutDashboard, MessageSquare, Star, Bot, BarChart3,
-  Bell, HelpCircle, QrCode, Link2, Settings, LogOut, Menu, X
+  Bell, HelpCircle, QrCode, Link2, Settings, LogOut, Menu, X, Shield
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
@@ -93,6 +93,21 @@ export function DashboardLayout() {
             </nav>
 
             <div className="p-4 border-t">
+              {user?.role === 'ADMIN' && (
+                <NavLink
+                  to="/admin"
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) => cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-3',
+                    isActive
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-indigo-600 hover:bg-indigo-50'
+                  )}
+                >
+                  <Shield size={18} />
+                  Admin Panel
+                </NavLink>
+              )}
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                   <span className="text-sm font-medium text-primary-700">

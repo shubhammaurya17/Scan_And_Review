@@ -12,6 +12,11 @@ export function requireBusinessAccess(paramName = 'businessId') {
         return next(new AppError('Unauthorized', 401));
       }
 
+      // Admin users can access any business
+      if (req.user?.role === 'ADMIN') {
+        return next();
+      }
+
       const membership = await prisma.businessMember.findUnique({
         where: {
           userId_businessId: { userId, businessId },

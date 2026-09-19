@@ -12,7 +12,7 @@ export function SettingsPage() {
   const businessId = currentBusiness?.id || '';
   const queryClient = useQueryClient();
 
-  const { data: business } = useQuery({
+  const { data: business, isLoading } = useQuery({
     queryKey: ['business', businessId],
     queryFn: () => businessApi.getBusiness(businessId),
     enabled: !!businessId,
@@ -24,6 +24,27 @@ export function SettingsPage() {
     mutationFn: (data: Record<string, unknown>) => businessApi.updateBusiness(businessId, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['business', businessId] }),
   });
+
+  if (!businessId) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <Card className="mt-6">
+          <CardContent className="text-center py-10">
+            <p className="text-gray-500">No business selected. Please select a business from the sidebar.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mt-10" />
+      </div>
+    );
+  }
 
   if (!business) return null;
 

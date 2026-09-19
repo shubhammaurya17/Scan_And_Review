@@ -113,6 +113,25 @@ export class AuthService {
 
     const tokens = this.generateTokens(user.id, user.role);
 
+    // Admin users can access all businesses
+    let businesses;
+    if (user.role === 'ADMIN') {
+      const allBusinesses = await prisma.business.findMany({ orderBy: { name: 'asc' } });
+      businesses = allBusinesses.map(b => ({
+        id: b.id,
+        name: b.name,
+        slug: b.slug,
+        role: 'ADMIN',
+      }));
+    } else {
+      businesses = user.memberships.map(m => ({
+        id: m.business.id,
+        name: m.business.name,
+        slug: m.business.slug,
+        role: m.role,
+      }));
+    }
+
     return {
       user: {
         id: user.id,
@@ -120,12 +139,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
       },
-      businesses: user.memberships.map(m => ({
-        id: m.business.id,
-        name: m.business.name,
-        slug: m.business.slug,
-        role: m.role,
-      })),
+      businesses,
       tokens,
     };
   }
@@ -142,6 +156,25 @@ export class AuthService {
 
     if (!user) throw new AppError('User not found', 404);
 
+    // Admin users can access all businesses
+    let businesses;
+    if (user.role === 'ADMIN') {
+      const allBusinesses = await prisma.business.findMany({ orderBy: { name: 'asc' } });
+      businesses = allBusinesses.map(b => ({
+        id: b.id,
+        name: b.name,
+        slug: b.slug,
+        role: 'ADMIN',
+      }));
+    } else {
+      businesses = user.memberships.map(m => ({
+        id: m.business.id,
+        name: m.business.name,
+        slug: m.business.slug,
+        role: m.role,
+      }));
+    }
+
     return {
       user: {
         id: user.id,
@@ -149,12 +182,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
       },
-      businesses: user.memberships.map(m => ({
-        id: m.business.id,
-        name: m.business.name,
-        slug: m.business.slug,
-        role: m.role,
-      })),
+      businesses,
     };
   }
 

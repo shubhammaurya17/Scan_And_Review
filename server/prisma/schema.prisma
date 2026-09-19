@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id           String           @id @default(uuid())
+  id           String           @id @default(cuid())
   email        String           @unique
   passwordHash String
   name         String
@@ -19,7 +19,7 @@ model User {
 }
 
 model Business {
-  id              String             @id @default(uuid())
+  id              String             @id @default(cuid())
   name            String
   slug            String             @unique
   description     String?
@@ -48,7 +48,7 @@ model Business {
 }
 
 model BusinessMember {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   userId     String
   businessId String
   role       String   @default("OWNER")
@@ -60,7 +60,7 @@ model BusinessMember {
 }
 
 model Category {
-  id                String             @id @default(uuid())
+  id                String             @id @default(cuid())
   name              String             @unique
   slug              String             @unique
   createdAt         DateTime           @default(now())
@@ -69,7 +69,7 @@ model Category {
 }
 
 model QuestionTemplate {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   categoryId String
   text       String
   sortOrder  Int
@@ -79,7 +79,7 @@ model QuestionTemplate {
 }
 
 model BusinessQuestion {
-  id         String             @id @default(uuid())
+  id         String             @id @default(cuid())
   businessId String
   text       String
   sortOrder  Int
@@ -90,9 +90,9 @@ model BusinessQuestion {
 }
 
 model ReviewSession {
-  id           String            @id @default(uuid())
+  id           String            @id @default(cuid())
   businessId   String
-  sessionToken String            @unique @default(uuid())
+  sessionToken String            @unique
   status       String            @default("STARTED")
   ipHash       String?
   userAgent    String?
@@ -105,7 +105,7 @@ model ReviewSession {
 }
 
 model CustomerResponse {
-  id         String           @id @default(uuid())
+  id         String           @id @default(cuid())
   sessionId  String
   questionId String
   rating     Int
@@ -117,7 +117,7 @@ model CustomerResponse {
 }
 
 model CustomerFeedback {
-  id        String        @id @default(uuid())
+  id        String        @id @default(cuid())
   sessionId String        @unique
   comment   String?
   createdAt DateTime      @default(now())
@@ -125,7 +125,7 @@ model CustomerFeedback {
 }
 
 model ReviewDraft {
-  id         String        @id @default(uuid())
+  id         String        @id @default(cuid())
   sessionId  String
   style      String
   content    String
@@ -136,7 +136,7 @@ model ReviewDraft {
 }
 
 model FunnelEvent {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   businessId String
   sessionId  String?
   eventType  String
@@ -149,7 +149,7 @@ model FunnelEvent {
 }
 
 model GoogleConnection {
-  id           String   @id @default(uuid())
+  id           String   @id @default(cuid())
   businessId   String   @unique
   accessToken  String?
   refreshToken String?
@@ -162,7 +162,7 @@ model GoogleConnection {
 }
 
 model GoogleReview {
-  id          String    @id @default(uuid())
+  id          String    @id @default(cuid())
   businessId  String
   googleId    String    @unique
   authorName  String
@@ -177,7 +177,7 @@ model GoogleReview {
 }
 
 model AIReply {
-  id        String       @id @default(uuid())
+  id        String       @id @default(cuid())
   reviewId  String
   tone      String
   content   String
@@ -187,7 +187,7 @@ model AIReply {
 }
 
 model AIAnalysis {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   businessId  String
   type        String
   result      String
@@ -200,17 +200,17 @@ model AIAnalysis {
 }
 
 model QRConfiguration {
-  id              String  @id @default(uuid())
-  businessId      String  @unique
-  foregroundColor String  @default("#000000")
-  backgroundColor String  @default("#FFFFFF")
+  id              String   @id @default(cuid())
+  businessId      String   @unique
+  foregroundColor String   @default("#000000")
+  backgroundColor String   @default("#FFFFFF")
   logoUrl         String?
-  style           String  @default("SQUARE")
+  style           String   @default("SQUARE")
   business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 
 model ReputationAlert {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   businessId String
   type       String
   threshold  Int?

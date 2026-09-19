@@ -45,6 +45,11 @@ export async function getAnalytics(businessId: string, period?: string) {
   return data.data;
 }
 
+export async function getAIInsights(businessId: string) {
+  const { data } = await api.get(`/business/${businessId}/ai/insights`);
+  return data.data;
+}
+
 export async function getCategories() {
   const { data } = await api.get('/business/categories');
   return data.data;

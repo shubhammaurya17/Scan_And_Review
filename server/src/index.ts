@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import { config } from './config/env';
 import routes from './routes';
 import { errorHandler } from './middleware/errorHandler';
+import { requestLogger } from './middleware/requestLogger';
+import { generalLimiter } from './middleware/rateLimit';
 
 const app = express();
 
@@ -16,6 +18,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(requestLogger);
+app.use('/api', generalLimiter);
 
 // Routes
 app.use('/api', routes);

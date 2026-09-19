@@ -138,6 +138,13 @@ export class ReviewService {
       }
     });
 
+    // Non-blocking: check for alerts
+    import('../services/alert.service').then(({ alertService }) => {
+      alertService.checkAndCreateAlerts(session.businessId, session.id).catch(err => {
+        console.error('Alert check failed:', err);
+      });
+    });
+
     return { success: true };
   }
 

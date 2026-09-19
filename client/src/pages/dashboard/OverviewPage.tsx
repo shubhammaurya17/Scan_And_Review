@@ -1,10 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import * as businessApi from '../../services/businessApi';
+import { alertApi } from '../../services/alertApi';
 import { Card, CardContent } from '../../components/ui/Card';
 import { StarRating } from '../../components/ui/StarRating';
 import { Badge } from '../../components/ui/Badge';
-import { TrendingUp, Users, MessageSquare, ArrowRight } from 'lucide-react';
+import { TrendingUp, Users, MessageSquare, ArrowRight, AlertTriangle, TrendingDown, Frown, Bell } from 'lucide-react';
+
+const alertTypeMeta: Record<string, { icon: any; color: string }> = {
+  LOW_RATING: { icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
+  RATING_DROP: { icon: TrendingDown, color: 'text-orange-600 bg-orange-50' },
+  NEGATIVE_SENTIMENT: { icon: Frown, color: 'text-purple-600 bg-purple-50' },
+};
 
 export function OverviewPage() {
   const { currentBusiness } = useAuth();
@@ -22,9 +30,17 @@ export function OverviewPage() {
     enabled: !!businessId,
   });
 
+  const { data: alertsResult } = useQuery({
+    queryKey: ['alerts', businessId, 'overview'],
+    queryFn: () => alertApi.getAlerts(businessId, { page: 1 }).then(r => r.data),
+    enabled: !!businessId,
+  });
+
   const feedback = analytics?.feedback;
   const funnel = analytics?.funnel;
   const recentFeedback = feedbackResult?.data || [];
+  const recentAlerts = (alertsResult?.data || []).slice(0, 3);
+  const unreadAlertCount = alertsResult?.unreadCount || 0;
 
   const stats = [
     { label: 'Total Feedback', value: feedback?.totalFeedback || 0, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
@@ -142,6 +158,51 @@ export function OverviewPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Alerts */}
+      <Card>
+        <CardContent>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold">Reputation Alerts</h3>
+              {unreadAlertCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold">
+                  {unreadAlertCount}
+                </span>
+              )}
+            </div>
+            <Link to="/dashboard/alerts" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+              View All Alerts <ArrowRight size={14} />
+            </Link>
+          </div>
+          {recentAlerts.length === 0 ? (
+            <p className="text-gray-500 text-sm flex items-center gap-2">
+              <Bell size={16} className="text-gray-400" /> No alerts right now — you're all caught up!
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {recentAlerts.map((alert: any) => {
+                const meta = alertTypeMeta[alert.type] || alertTypeMeta.LOW_RATING;
+                const Icon = meta.icon;
+                return (
+                  <div
+                    key={alert.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg ${!alert.isRead ? 'bg-blue-50/60 border-l-4 border-l-blue-500' : 'bg-gray-50'}`}
+                  >
+                    <div className={`p-1.5 rounded-lg ${meta.color}`}>
+                      <Icon size={16} />
+                    </div>
+                    <p className="text-sm text-gray-700 flex-1 truncate">{alert.message}</p>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                      {new Date(alert.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recent Feedback */}
       <Card>

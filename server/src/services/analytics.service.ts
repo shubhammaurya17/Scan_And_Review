@@ -158,6 +158,52 @@ export class AnalyticsService {
       },
     };
   }
+
+  async getTimeSeriesData(businessId: string, startDate: Date, endDate: Date) {
+    const sessions = await prisma.reviewSession.findMany({
+      where: {
+        businessId,
+        createdAt: { gte: startDate, lte: endDate },
+        status: { not: 'STARTED' },
+      },
+      include: { responses: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Group by date
+    const dailyData: Record<string, { totalRating: number; count: number; feedbackCount: number }> = {};
+    for (const session of sessions) {
+      const date = session.createdAt.toISOString().split('T')[0];
+      if (!dailyData[date]) {
+        dailyData[date] = { totalRating: 0, count: 0, feedbackCount: 0 };
+      }
+      dailyData[date].feedbackCount++;
+      if (session.responses.length > 0) {
+        const avg = session.responses.reduce((s, r) => s + r.rating, 0) / session.responses.length;
+        dailyData[date].totalRating += avg;
+        dailyData[date].count++;
+      }
+    }
+
+    return Object.entries(dailyData).map(([date, data]) => ({
+      date,
+      averageRating: data.count > 0 ? Math.round((data.totalRating / data.count) * 10) / 10 : 0,
+      feedbackCount: data.feedbackCount,
+    }));
+  }
+
+  async getTopicAnalysis(businessId: string) {
+    try {
+      const analysis = await prisma.aIAnalysis.findFirst({
+        where: { businessId, type: 'TOPICS' },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!analysis) return { topics: {}, totalComments: 0 };
+      return JSON.parse(analysis.result);
+    } catch {
+      return { topics: {}, totalComments: 0 };
+    }
+  }
 }
 
 export const analyticsService = new AnalyticsService();

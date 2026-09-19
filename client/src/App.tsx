@@ -11,6 +11,16 @@ import { QRStudioPage } from './pages/dashboard/QRStudioPage';
 import { AnalyticsPage } from './pages/dashboard/AnalyticsPage';
 import { SettingsPage } from './pages/dashboard/SettingsPage';
 import { LandingPage } from './pages/LandingPage';
+import AlertsPage from './pages/dashboard/AlertsPage';
+import GoogleConnectionPage from './pages/dashboard/GoogleConnectionPage';
+import GoogleReviewsPage from './pages/dashboard/GoogleReviewsPage';
+import AIRepliesPage from './pages/dashboard/AIRepliesPage';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import BusinessManagementPage from './pages/admin/BusinessManagementPage';
+import CategoryManagementPage from './pages/admin/CategoryManagementPage';
+import SystemHealthPage from './pages/admin/SystemHealthPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
 
 export default function App() {
   return (
@@ -34,10 +44,23 @@ export default function App() {
         <Route path="qr-studio" element={<QRStudioPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="google-reviews" element={<div className="p-6"><h1 className="text-2xl font-bold">Google Reviews</h1><p className="text-gray-500 mt-2">Google Business Profile — Not Connected — Configuration Required</p></div>} />
-        <Route path="ai-replies" element={<div className="p-6"><h1 className="text-2xl font-bold">AI Replies</h1><p className="text-gray-500 mt-2">Connect Google Business Profile to enable AI reply generation.</p></div>} />
-        <Route path="alerts" element={<div className="p-6"><h1 className="text-2xl font-bold">Reputation Alerts</h1><p className="text-gray-500 mt-2">Coming soon — alert rules for rating drops and sentiment changes.</p></div>} />
-        <Route path="google-connection" element={<div className="p-6"><h1 className="text-2xl font-bold">Google Connection</h1><p className="text-gray-500 mt-2">Google OAuth integration will be configured here.</p></div>} />
+        <Route path="google-reviews" element={<GoogleReviewsPage />} />
+        <Route path="ai-replies" element={<AIRepliesPage />} />
+        <Route path="alerts" element={<AlertsPage />} />
+        <Route path="google-connection" element={<GoogleConnectionPage />} />
+      </Route>
+
+      {/* Protected - Admin */}
+      <Route path="/admin" element={
+        <ProtectedRoute>
+          <AdminLayout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="businesses" element={<BusinessManagementPage />} />
+        <Route path="categories" element={<CategoryManagementPage />} />
+        <Route path="users" element={<UserManagementPage />} />
+        <Route path="health" element={<SystemHealthPage />} />
       </Route>
 
       {/* Landing */}

@@ -193,6 +193,18 @@ export class BusinessController {
     }
   }
 
+  // AI Insights
+  async getAIInsights(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { businessId } = req.params;
+      const { aiAnalysisService } = await import('../services/ai-analysis.service');
+      const result = await aiAnalysisService.generateInsights(businessId);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   // Categories (for signup)
   async getCategories(_req: Request, res: Response, next: NextFunction) {
     try {

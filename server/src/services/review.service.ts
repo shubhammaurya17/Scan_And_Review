@@ -1,5 +1,6 @@
 import { prisma } from '../config/database';
 import { getAIService } from './ai-factory';
+import { TemplateService } from './template.service';
 import { AppError } from '../utils/AppError';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
@@ -169,14 +170,30 @@ export class ReviewService {
 
     const averageRating = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
 
-    const aiService = getAIService();
-    const drafts = await aiService.generateReviewDrafts({
+    const draftInput = {
       businessName: session.business.name,
       categoryName: session.business.category?.name || 'Business',
       ratings,
       comment: session.feedback?.comment || undefined,
       averageRating,
-    });
+    };
+
+    let drafts: { style: string; content: string }[] = [];
+    const aiService = getAIService();
+
+    try {
+      drafts = await aiService.generateReviewDrafts(draftInput);
+    } catch (err) {
+      console.error('AI service threw during draft generation:', err);
+      // drafts stays [] — will trigger template fallback below
+    }
+
+    // If AI service returned no drafts (e.g. Ollama generation failed or threw), fall back to templates
+    if (drafts.length === 0) {
+      console.warn('AI service returned 0 drafts — falling back to template generation');
+      const templateService = new TemplateService();
+      drafts = await templateService.generateReviewDrafts(draftInput);
+    }
 
     // Delete existing drafts for this session
     await prisma.reviewDraft.deleteMany({ where: { sessionId: session.id } });

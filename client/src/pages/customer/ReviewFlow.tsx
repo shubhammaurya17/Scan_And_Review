@@ -1,4 +1,4 @@
-import { useReducer, useEffect } from 'react';
+import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import * as reviewApi from '../../services/reviewApi';
 import { WelcomePage } from './steps/WelcomePage';
@@ -8,8 +8,11 @@ import { GeneratingPage } from './steps/GeneratingPage';
 import { DraftsPage } from './steps/DraftsPage';
 import { HandoffPage } from './steps/HandoffPage';
 import { ThankYouPage } from './steps/ThankYouPage';
+import { RefreshCw } from 'lucide-react';
 
 type Step = 'loading' | 'welcome' | 'rating' | 'comment' | 'generating' | 'drafts' | 'handoff' | 'done' | 'error';
+
+const GENERATION_TIMEOUT_MS = 45000; // 45 seconds max for draft generation
 
 interface State {
   step: Step;
@@ -25,6 +28,8 @@ interface State {
   googleReviewUrl: string | null;
   error: string | null;
   isLoading: boolean;
+  canRetry: boolean;
+  retryCount: number;
 }
 
 type Action =
@@ -37,7 +42,11 @@ type Action =
   | { type: 'SELECT_DRAFT'; payload: { draftId: string; editedText?: string } }
   | { type: 'SET_GOOGLE_URL'; payload: string }
   | { type: 'SET_ERROR'; payload: string }
-  | { type: 'SET_LOADING'; payload: boolean };
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_CAN_RETRY'; payload: boolean }
+  | { type: 'INCREMENT_RETRY' };
+
+const MAX_RETRIES = 3;
 
 const initialState: State = {
   step: 'loading',
@@ -53,6 +62,8 @@ const initialState: State = {
   googleReviewUrl: null,
   error: null,
   isLoading: false,
+  canRetry: false,
+  retryCount: 0,
 };
 
 function reducer(state: State, action: Action): State {
@@ -68,15 +79,19 @@ function reducer(state: State, action: Action): State {
     case 'SET_STEP':
       return { ...state, step: action.payload };
     case 'SET_DRAFTS':
-      return { ...state, drafts: action.payload, step: 'drafts' };
+      return { ...state, drafts: action.payload, step: 'drafts', canRetry: action.payload.length === 0 };
     case 'SELECT_DRAFT':
       return { ...state, selectedDraftId: action.payload.draftId, editedText: action.payload.editedText || null };
     case 'SET_GOOGLE_URL':
       return { ...state, googleReviewUrl: action.payload };
     case 'SET_ERROR':
-      return { ...state, error: action.payload, step: 'error' };
+      return { ...state, error: action.payload, step: 'error', canRetry: state.retryCount < MAX_RETRIES && !!state.sessionToken };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
+    case 'SET_CAN_RETRY':
+      return { ...state, canRetry: action.payload };
+    case 'INCREMENT_RETRY':
+      return { ...state, retryCount: state.retryCount + 1 };
     default:
       return state;
   }
@@ -85,6 +100,27 @@ function reducer(state: State, action: Action): State {
 export function ReviewFlow() {
   const { businessSlug } = useParams<{ businessSlug: string }>();
   const [state, dispatch] = useReducer(reducer, initialState);
+  const generationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearGenerationTimeout = useCallback(() => {
+    if (generationTimeoutRef.current) {
+      clearTimeout(generationTimeoutRef.current);
+      generationTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Safety timeout: if generating takes too long, show error with retry
+  useEffect(() => {
+    if (state.step === 'generating') {
+      generationTimeoutRef.current = setTimeout(() => {
+        dispatch({ type: 'SET_ERROR', payload: 'This is taking longer than expected. Please try again.' });
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }, GENERATION_TIMEOUT_MS);
+    } else {
+      clearGenerationTimeout();
+    }
+    return clearGenerationTimeout;
+  }, [state.step, clearGenerationTimeout]);
 
   // Load business info
   useEffect(() => {
@@ -142,6 +178,22 @@ export function ReviewFlow() {
     }
   };
 
+  const handleRetryDrafts = async () => {
+    if (!businessSlug || !state.sessionToken) return;
+    dispatch({ type: 'INCREMENT_RETRY' });
+    dispatch({ type: 'SET_STEP', payload: 'generating' });
+    dispatch({ type: 'SET_LOADING', payload: true });
+
+    try {
+      const drafts = await reviewApi.generateDrafts(businessSlug, state.sessionToken);
+      dispatch({ type: 'SET_DRAFTS', payload: drafts });
+    } catch (err: any) {
+      dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || 'Failed to generate drafts' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
   const handleSelectDraft = async (draftId: string, editedText?: string) => {
     if (!businessSlug || !state.sessionToken) return;
     dispatch({ type: 'SELECT_DRAFT', payload: { draftId, editedText } });
@@ -185,7 +237,16 @@ export function ReviewFlow() {
           <div className="text-center py-20">
             <div className="text-6xl mb-4">😕</div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Oops!</h2>
-            <p className="text-gray-600">{state.error}</p>
+            <p className="text-gray-600 mb-6">{state.error}</p>
+            {state.canRetry && (
+              <button
+                onClick={handleRetryDrafts}
+                className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              >
+                <RefreshCw size={18} className="mr-2" />
+                Try Again
+              </button>
+            )}
           </div>
         )}
 
@@ -221,6 +282,7 @@ export function ReviewFlow() {
           <DraftsPage
             drafts={state.drafts}
             onSelectDraft={handleSelectDraft}
+            onRetry={handleRetryDrafts}
           />
         )}
 

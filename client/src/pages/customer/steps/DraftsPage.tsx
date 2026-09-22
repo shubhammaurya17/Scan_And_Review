@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
-import { Edit3, Check } from 'lucide-react';
+import { Edit3, Check, RefreshCw } from 'lucide-react';
 
 const STYLE_LABELS: Record<string, string> = {
   PROFESSIONAL: 'Balanced & Authentic',
@@ -18,9 +18,10 @@ const STYLE_VARIANTS: Record<string, 'info' | 'success' | 'warning'> = {
 interface Props {
   drafts: Array<{ id: string; style: string; content: string }>;
   onSelectDraft: (draftId: string, editedText?: string) => void;
+  onRetry?: () => void;
 }
 
-export function DraftsPage({ drafts, onSelectDraft }: Props) {
+export function DraftsPage({ drafts, onSelectDraft, onRetry }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
 
@@ -42,6 +43,18 @@ export function DraftsPage({ drafts, onSelectDraft }: Props) {
       <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your Review</h2>
       <p className="text-gray-500 text-sm mb-6">Select a style that feels right, or edit to make it yours</p>
 
+      {drafts.length === 0 ? (
+        <div className="text-center py-10">
+          <div className="text-4xl mb-3">📝</div>
+          <p className="text-gray-600 mb-4">We couldn't generate reviews right now. Please try again.</p>
+          {onRetry && (
+            <Button onClick={onRetry} variant="outline">
+              <RefreshCw size={16} className="mr-2" />
+              Try Again
+            </Button>
+          )}
+        </div>
+      ) : (
       <div className="space-y-4">
         {drafts.map((draft) => (
           <div
@@ -83,6 +96,7 @@ export function DraftsPage({ drafts, onSelectDraft }: Props) {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

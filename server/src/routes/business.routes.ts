@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireBusinessAccess } from '../middleware/businessAccess';
 import { validate } from '../middleware/validate';
 import { createQuestionSchema, updateQuestionSchema, reorderQuestionsSchema, updateBusinessSchema } from '../validators/business.validators';
+import { aiLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -30,8 +31,8 @@ router.get('/:businessId/analytics', requireAuth, requireBusinessAccess(), busin
 router.get('/:businessId/qr', requireAuth, requireBusinessAccess(), businessController.getQR);
 router.get('/:businessId/qr/config', requireAuth, requireBusinessAccess(), businessController.getQRConfig);
 
-// AI
+// AI (with stricter rate limit)
 router.get('/:businessId/ai/insights', requireAuth, requireBusinessAccess(), businessController.getAIInsights);
-router.post('/:businessId/ai/reply', requireAuth, requireBusinessAccess(), googleController.generateAIReply);
+router.post('/:businessId/ai/reply', requireAuth, requireBusinessAccess(), aiLimiter, googleController.generateAIReply);
 
 export default router;

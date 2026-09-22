@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service';
+import { config } from '../config/env';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: config.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   path: '/',
 };

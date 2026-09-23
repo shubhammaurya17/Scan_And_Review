@@ -1,16 +1,14 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import * as reviewApi from '../../services/reviewApi';
-import { WelcomePage } from './steps/WelcomePage';
 import { RatingPage } from './steps/RatingPage';
-import { CommentPage } from './steps/CommentPage';
 import { GeneratingPage } from './steps/GeneratingPage';
 import { DraftsPage } from './steps/DraftsPage';
 import { HandoffPage } from './steps/HandoffPage';
 import { ThankYouPage } from './steps/ThankYouPage';
 import { RefreshCw } from 'lucide-react';
 
-type Step = 'loading' | 'welcome' | 'rating' | 'comment' | 'generating' | 'drafts' | 'handoff' | 'done' | 'error';
+type Step = 'loading' | 'rating' | 'generating' | 'drafts' | 'handoff' | 'done' | 'error';
 
 const GENERATION_TIMEOUT_MS = 45000; // 45 seconds max for draft generation
 
@@ -21,7 +19,6 @@ interface State {
   sessionToken: string | null;
   businessId: string | null;
   ratings: Record<string, number>;
-  comment: string;
   drafts: any[];
   selectedDraftId: string | null;
   editedText: string | null;
@@ -33,10 +30,8 @@ interface State {
 }
 
 type Action =
-  | { type: 'SET_BUSINESS'; payload: { business: any; questions: any[] } }
-  | { type: 'SET_SESSION'; payload: { sessionToken: string; businessId: string } }
+  | { type: 'SET_BUSINESS'; payload: { business: any; questions: any[]; sessionToken: string; businessId: string } }
   | { type: 'SET_RATING'; payload: { questionId: string; rating: number } }
-  | { type: 'SET_COMMENT'; payload: string }
   | { type: 'SET_STEP'; payload: Step }
   | { type: 'SET_DRAFTS'; payload: any[] }
   | { type: 'SELECT_DRAFT'; payload: { draftId: string; editedText?: string } }
@@ -55,7 +50,6 @@ const initialState: State = {
   sessionToken: null,
   businessId: null,
   ratings: {},
-  comment: '',
   drafts: [],
   selectedDraftId: null,
   editedText: null,
@@ -69,13 +63,16 @@ const initialState: State = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_BUSINESS':
-      return { ...state, business: action.payload.business, questions: action.payload.questions, step: 'welcome' };
-    case 'SET_SESSION':
-      return { ...state, sessionToken: action.payload.sessionToken, businessId: action.payload.businessId };
+      return {
+        ...state,
+        business: action.payload.business,
+        questions: action.payload.questions,
+        sessionToken: action.payload.sessionToken,
+        businessId: action.payload.businessId,
+        step: 'rating',
+      };
     case 'SET_RATING':
       return { ...state, ratings: { ...state.ratings, [action.payload.questionId]: action.payload.rating } };
-    case 'SET_COMMENT':
-      return { ...state, comment: action.payload };
     case 'SET_STEP':
       return { ...state, step: action.payload };
     case 'SET_DRAFTS':
@@ -122,42 +119,37 @@ export function ReviewFlow() {
     return clearGenerationTimeout;
   }, [state.step, clearGenerationTimeout]);
 
-  // Load business info
+  // Load business info AND start session immediately
   useEffect(() => {
     if (!businessSlug) return;
-    reviewApi.getBusinessInfo(businessSlug)
-      .then(data => {
-        dispatch({ type: 'SET_BUSINESS', payload: data });
-        dispatch({ type: 'SET_GOOGLE_URL', payload: data.business.googleReviewUrl || '' });
-      })
-      .catch(err => {
-        dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || 'Business not found' });
-      });
-  }, [businessSlug]);
 
-  const handleStartSession = async () => {
-    if (!businessSlug) return;
-    dispatch({ type: 'SET_LOADING', payload: true });
-    try {
-      const data = await reviewApi.startSession(businessSlug);
-      dispatch({ type: 'SET_SESSION', payload: data });
-      dispatch({ type: 'SET_STEP', payload: 'rating' });
-    } catch (err: any) {
-      dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || 'Failed to start session' });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
+    (async () => {
+      try {
+        const data = await reviewApi.getBusinessInfo(businessSlug);
+        dispatch({ type: 'SET_GOOGLE_URL', payload: data.business.googleReviewUrl || '' });
+
+        // Start session immediately so we go straight to rating
+        const sessionData = await reviewApi.startSession(businessSlug);
+        dispatch({
+          type: 'SET_BUSINESS',
+          payload: {
+            business: data.business,
+            questions: data.questions,
+            sessionToken: sessionData.sessionToken,
+            businessId: sessionData.businessId,
+          },
+        });
+      } catch (err: any) {
+        dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || 'Business not found' });
+      }
+    })();
+  }, [businessSlug]);
 
   const handleSetRating = (questionId: string, rating: number) => {
     dispatch({ type: 'SET_RATING', payload: { questionId, rating } });
   };
 
-  const handleSubmitRatings = () => {
-    dispatch({ type: 'SET_STEP', payload: 'comment' });
-  };
-
-  const handleSubmitFeedback = async (skipComment = false) => {
+  const handleSubmitRatings = async () => {
     if (!businessSlug || !state.sessionToken) return;
     dispatch({ type: 'SET_STEP', payload: 'generating' });
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -166,7 +158,6 @@ export function ReviewFlow() {
       await reviewApi.submitFeedback(businessSlug, {
         sessionToken: state.sessionToken,
         ratings: Object.entries(state.ratings).map(([questionId, rating]) => ({ questionId, rating })),
-        comment: skipComment ? undefined : state.comment || undefined,
       });
 
       const drafts = await reviewApi.generateDrafts(businessSlug, state.sessionToken);
@@ -250,29 +241,14 @@ export function ReviewFlow() {
           </div>
         )}
 
-        {state.step === 'welcome' && (
-          <WelcomePage
-            business={state.business}
-            onStart={handleStartSession}
-            isLoading={state.isLoading}
-          />
-        )}
-
-        {state.step === 'rating' && (
+        {state.step === 'rating' && state.business && (
           <RatingPage
+            business={state.business}
             questions={state.questions}
             ratings={state.ratings}
             onSetRating={handleSetRating}
             onSubmit={handleSubmitRatings}
-          />
-        )}
-
-        {state.step === 'comment' && (
-          <CommentPage
-            comment={state.comment}
-            onSetComment={(c) => dispatch({ type: 'SET_COMMENT', payload: c })}
-            onSubmit={() => handleSubmitFeedback(false)}
-            onSkip={() => handleSubmitFeedback(true)}
+            isLoading={state.isLoading}
           />
         )}
 

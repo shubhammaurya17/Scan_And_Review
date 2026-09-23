@@ -7,46 +7,88 @@ export class TemplateService implements IAIService {
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
     const avgRating = input.averageRating;
-    const qualityWord = this.getQualityWord(avgRating);
     const highestRated = [...input.ratings].sort((a, b) => b.rating - a.rating)[0];
     const lowestRated = [...input.ratings].sort((a, b) => a.rating - b.rating)[0];
-
-    const commentPart = input.comment ? ` ${input.comment}` : '';
     const businessName = input.businessName;
+    const commentPart = input.comment ? ` ${input.comment}` : '';
 
-    // Professional / Balanced & Authentic
-    let professional = `Had a ${qualityWord} experience at ${businessName}.`;
-    if (highestRated && highestRated.rating >= 4) {
-      professional += ` The ${highestRated.questionText.toLowerCase()} was particularly impressive.`;
+    // Professional — natural, specific
+    let professional = '';
+    if (avgRating >= 4) {
+      professional = `Visited ${businessName} and had a really solid experience overall.`;
+      if (highestRated && highestRated.rating >= 4) {
+        professional += ` The ${highestRated.questionText.toLowerCase()} really stood out — ${highestRated.rating === 5 ? 'genuinely impressive' : 'well above average'}.`;
+      }
+      if (lowestRated && lowestRated.rating <= 3 && lowestRated !== highestRated) {
+        professional += ` The ${lowestRated.questionText.toLowerCase()} has a bit of room to improve, but nothing that would keep me from coming back.`;
+      }
+    } else if (avgRating >= 3) {
+      professional = `My visit to ${businessName} was a mixed bag.`;
+      if (highestRated && highestRated.rating >= 4) {
+        professional += ` The ${highestRated.questionText.toLowerCase()} was a highlight.`;
+      }
+      if (lowestRated && lowestRated.rating <= 2) {
+        professional += ` Unfortunately, the ${lowestRated.questionText.toLowerCase()} fell short of expectations.`;
+      }
+      professional += ` Has potential, but some areas need work.`;
+    } else {
+      professional = `Disappointing visit to ${businessName}.`;
+      if (lowestRated && lowestRated.rating <= 2) {
+        professional += ` The ${lowestRated.questionText.toLowerCase()} was particularly lacking.`;
+      }
+      if (highestRated && highestRated.rating >= 3) {
+        professional += ` The ${highestRated.questionText.toLowerCase()} was okay, but not enough to save the overall experience.`;
+      }
+      professional += ` Would need to see significant improvements before returning.`;
     }
-    if (lowestRated && lowestRated.rating <= 2) {
-      professional += ` However, the ${lowestRated.questionText.toLowerCase()} could use some improvement.`;
-    }
-    if (commentPart) {
-      professional += commentPart;
-    }
+    if (commentPart) professional += commentPart;
 
-    // Friendly / Warm & Natural
-    let friendly = avgRating >= 4
-      ? `Really enjoyed my visit to ${businessName}!`
-      : avgRating >= 3
-        ? `Visited ${businessName} recently — it was a decent experience.`
-        : `Visited ${businessName} and had some concerns.`;
-    if (highestRated && highestRated.rating >= 4) {
-      friendly += ` Loved the ${highestRated.questionText.toLowerCase()}.`;
+    // Friendly — casual, warm
+    let friendly = '';
+    if (avgRating >= 4) {
+      friendly = `Really enjoyed my time at ${businessName}!`;
+      if (highestRated && highestRated.rating >= 4) {
+        friendly += ` Loved the ${highestRated.questionText.toLowerCase()} — ${highestRated.rating === 5 ? 'seriously top-notch!' : 'really well done.'}`;
+      }
+      if (lowestRated && lowestRated.rating <= 3 && lowestRated !== highestRated) {
+        friendly += ` The ${lowestRated.questionText.toLowerCase()} could be a little better, but honestly it's a minor thing.`;
+      }
+      friendly += ` Would definitely come back!`;
+    } else if (avgRating >= 3) {
+      friendly = `Went to ${businessName} — it was alright!`;
+      if (highestRated && highestRated.rating >= 4) {
+        friendly += ` The ${highestRated.questionText.toLowerCase()} was nice.`;
+      }
+      if (lowestRated && lowestRated.rating <= 2) {
+        friendly += ` Wasn't too happy with the ${lowestRated.questionText.toLowerCase()} though.`;
+      }
+      friendly += ` Not bad, not amazing — might give it another shot.`;
+    } else {
+      friendly = `Had a tough experience at ${businessName}.`;
+      if (lowestRated && lowestRated.rating <= 2) {
+        friendly += ` The ${lowestRated.questionText.toLowerCase()} was a letdown.`;
+      }
+      friendly += ` Hope they work on things — I'd love a reason to come back.`;
     }
-    if (lowestRated && lowestRated.rating <= 2) {
-      friendly += ` The ${lowestRated.questionText.toLowerCase()} wasn't quite what I hoped for.`;
-    }
-    if (commentPart) {
-      friendly += commentPart;
-    }
+    if (commentPart) friendly += commentPart;
 
-    // Concise / Short & Direct
-    let concise = `${businessName}: ${qualityWord} overall.`;
-    if (commentPart) {
-      concise += commentPart;
+    // Concise — short and punchy
+    let concise = '';
+    if (avgRating >= 4) {
+      concise = `Great experience at ${businessName}.`;
+      if (highestRated && highestRated.rating >= 4) {
+        concise += ` ${highestRated.questionText} was excellent.`;
+      }
+      concise += ` Recommended.`;
+    } else if (avgRating >= 3) {
+      concise = `${businessName} was decent.`;
+      if (highestRated && highestRated.rating >= 4) concise += ` Good ${highestRated.questionText.toLowerCase()}.`;
+      if (lowestRated && lowestRated.rating <= 2) concise += ` ${lowestRated.questionText} needs work.`;
+    } else {
+      concise = `${businessName} was below expectations.`;
+      if (lowestRated) concise += ` ${lowestRated.questionText} was the main issue.`;
     }
+    if (commentPart) concise += commentPart;
 
     return [
       { style: 'PROFESSIONAL', content: professional },
@@ -119,13 +161,5 @@ export class TemplateService implements IAIService {
     return Object.entries(topicKeywords)
       .filter(([_, keywords]) => keywords.some(k => combined.includes(k)))
       .map(([topic]) => topic);
-  }
-
-  private getQualityWord(rating: number): string {
-    if (rating >= 4.5) return 'excellent';
-    if (rating >= 3.5) return 'great';
-    if (rating >= 2.5) return 'decent';
-    if (rating >= 1.5) return 'disappointing';
-    return 'poor';
   }
 }

@@ -34,38 +34,60 @@ export class GroqService implements IAIService {
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
     const styles = [
-      { style: 'PROFESSIONAL' as const, instruction: 'Write a balanced and authentic review. Use polished, specific language. Mention what stood out positively and note areas for improvement honestly.' },
-      { style: 'FRIENDLY' as const, instruction: 'Write a warm and natural review. Use conversational tone. Show genuine enthusiasm for positives and honest feedback about any negatives.' },
-      { style: 'CONCISE' as const, instruction: 'Write a short and direct review. Be brief — 1-2 sentences maximum. Hit the key points only.' },
+      {
+        style: 'PROFESSIONAL' as const,
+        instruction: `Write a polished, genuine Google review in 3-4 sentences. Sound like a real person who visited — be specific about what was good or bad based on the ratings. Use natural, confident language. No generic filler phrases like "I had the pleasure" or "I would recommend". Just honest, clear feedback.`,
+      },
+      {
+        style: 'FRIENDLY' as const,
+        instruction: `Write a casual, upbeat Google review in 2-3 sentences. Sound like you're telling a friend about the place. Use conversational language — contractions, simple words, genuine emotion. If something was great, show excitement. If something was lacking, be honest but kind.`,
+      },
+      {
+        style: 'CONCISE' as const,
+        instruction: `Write a brief, punchy Google review in 1-2 sentences max. Get straight to the point — what was good, what wasn't. No fluff, no pleasantries. Think of it as a quick summary for someone scrolling through reviews.`,
+      },
     ];
 
     const ratingsText = input.ratings
-      .map(r => `- ${r.questionText}: ${r.rating}/5`)
+      .map(r => {
+        const emoji = r.rating >= 4 ? '👍' : r.rating <= 2 ? '👎' : '👌';
+        return `- ${r.questionText}: ${r.rating}/5 ${emoji}`;
+      })
       .join('\n');
+
+    const overallSentiment = input.averageRating >= 4 ? 'mostly positive'
+      : input.averageRating >= 3 ? 'mixed'
+      : 'mostly negative';
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are helping a customer write a Google review for "${input.businessName}" (a ${input.categoryName}).
+        const prompt = `You are a real customer writing a Google review for "${input.businessName}" (${input.categoryName}).
 
-The customer rated their experience:
+Here's how you rated your visit:
 ${ratingsText}
-Overall average: ${input.averageRating.toFixed(1)}/5
-${input.comment ? `\nCustomer's note: "${input.comment}"` : ''}
+
+Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
+${input.comment ? `\nYour personal note: "${input.comment}"` : ''}
 
 ${instruction}
 
-IMPORTANT RULES:
-- Write from the customer's perspective (first person)
-- Only mention what the customer actually rated or commented on
-- Do NOT invent staff names, specific dishes, prices, or experiences not mentioned
-- If ratings are low, reflect that honestly — do not turn negatives into positives
-- Keep it natural and authentic
-
-Write only the review text, nothing else:`;
+CRITICAL RULES:
+- Write in first person as the customer
+- ONLY reference things the ratings and comments actually cover — never invent details
+- Do NOT mention specific staff names, dish names, prices, or events unless the customer wrote about them
+- Match the tone to the ratings — don't sugarcoat low ratings or be overly excited about mediocre ones
+- Sound like a real Google review, not an AI-generated one
+- Do NOT start with the business name
+- Do NOT use quotation marks around the review
+- Output ONLY the review text, nothing else`;
 
         try {
-          const content = await this.generate(prompt, 0.7, 256);
-          return { style, content: content.trim() };
+          const content = await this.generate(prompt, 0.8, 200);
+          // Clean up any accidental quotation marks or prefixes
+          let cleaned = content.trim();
+          cleaned = cleaned.replace(/^["']|["']$/g, '');
+          cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
+          return { style, content: cleaned };
         } catch (err) {
           console.error(`Failed to generate ${style} draft:`, err);
           return null;

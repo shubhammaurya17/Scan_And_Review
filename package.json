@@ -15,7 +15,7 @@
     "db:setup": "npm run db:push -w server && npm run db:seed -w server",
     "db:push": "npm run db:push -w server",
     "db:seed": "npm run db:seed -w server",
-    "render-build": "npm install && npm run build -w shared && npx prisma generate --schema=server/prisma/schema.prisma && npm run build -w server && npm run build -w client && npx prisma migrate deploy --schema=server/prisma/schema.prisma"
+    "render-build": "npm install --include=dev && npm run build -w shared && npx prisma generate --schema=server/prisma/schema.prisma && npm run build -w server && npm run build -w client && npx prisma migrate deploy --schema=server/prisma/schema.prisma"
   },
   "devDependencies": {
     "typescript": "^5.6.3"

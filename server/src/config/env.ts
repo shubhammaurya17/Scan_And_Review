@@ -15,6 +15,7 @@ const envSchema = z.object({
   AI_PROVIDER: z.string().default('ollama'),
   AI_MODEL: z.string().default('llama3.2'),
   AI_BASE_URL: z.string().default('http://localhost:11434'),
+  GROQ_API_KEY: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),

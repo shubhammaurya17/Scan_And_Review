@@ -1,37 +1,81 @@
 import { IAIService } from './ai.service';
 import { OllamaService } from './ollama.service';
+import { GroqService } from './groq.service';
 import { TemplateService } from './template.service';
+import { config } from '../config/env';
 
 let currentService: IAIService;
-let ollamaAvailable = false;
+let aiAvailable = false;
 
-const ollamaService = new OllamaService();
 const templateService = new TemplateService();
 
-async function checkOllama(): Promise<void> {
-  const wasAvailable = ollamaAvailable;
-  ollamaAvailable = await ollamaService.isAvailable();
+async function initProvider(): Promise<void> {
+  const provider = config.AI_PROVIDER;
 
-  if (ollamaAvailable && !wasAvailable) {
-    console.log('✅ Ollama is available — using AI-powered generation');
-    currentService = ollamaService;
-  } else if (!ollamaAvailable && wasAvailable) {
-    console.log('⚠️ Ollama is unavailable — falling back to template generation');
+  if (provider === 'groq' && config.GROQ_API_KEY) {
+    const groqService = new GroqService();
+    const available = await groqService.isAvailable();
+
+    if (available) {
+      console.log('✅ Groq is available — using AI-powered generation');
+      currentService = groqService;
+      aiAvailable = true;
+    } else {
+      console.log('⚠️ Groq is unreachable — falling back to template generation');
+      currentService = templateService;
+      aiAvailable = false;
+    }
+
+    // Re-check Groq every 60 seconds
+    setInterval(async () => {
+      const wasAvailable = aiAvailable;
+      aiAvailable = await groqService.isAvailable();
+
+      if (aiAvailable && !wasAvailable) {
+        console.log('✅ Groq is available — using AI-powered generation');
+        currentService = groqService;
+      } else if (!aiAvailable && wasAvailable) {
+        console.log('⚠️ Groq is unavailable — falling back to template generation');
+        currentService = templateService;
+      }
+    }, 60000);
+  } else if (provider === 'ollama') {
+    const ollamaService = new OllamaService();
+
+    async function checkOllama(): Promise<void> {
+      const wasAvailable = aiAvailable;
+      aiAvailable = await ollamaService.isAvailable();
+
+      if (aiAvailable && !wasAvailable) {
+        console.log('✅ Ollama is available — using AI-powered generation');
+        currentService = ollamaService;
+      } else if (!aiAvailable && wasAvailable) {
+        console.log('⚠️ Ollama is unavailable — falling back to template generation');
+        currentService = templateService;
+      }
+    }
+
+    await checkOllama();
+    setInterval(() => checkOllama().catch(() => {}), 60000);
+  } else {
+    // template or unknown provider
+    console.log('📝 Using template-based generation');
     currentService = templateService;
+    aiAvailable = false;
   }
 }
 
-// Initial check
+// Initialize
 currentService = templateService;
-checkOllama().catch(() => {});
-
-// Re-check every 60 seconds
-setInterval(() => checkOllama().catch(() => {}), 60000);
+initProvider().catch(() => {});
 
 export function getAIService(): IAIService {
   return currentService;
 }
 
-export function isOllamaAvailable(): boolean {
-  return ollamaAvailable;
+export function isAIAvailable(): boolean {
+  return aiAvailable;
 }
+
+// Keep legacy export for backward compatibility
+export const isOllamaAvailable = isAIAvailable;

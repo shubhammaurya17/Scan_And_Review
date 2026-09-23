@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database';
-import { isOllamaAvailable } from '../services/ai-factory';
+import { isAIAvailable } from '../services/ai-factory';
 import { config } from '../config/env';
 import { AppError } from '../utils/AppError';
 import bcrypt from 'bcryptjs';
@@ -23,11 +23,11 @@ export class AdminController {
         data: {
           database: { status: dbHealthy ? 'healthy' : 'unhealthy' },
           ai: {
-            status: isOllamaAvailable() ? 'healthy' : 'fallback',
+            status: isAIAvailable() ? 'healthy' : 'fallback',
             provider: config.AI_PROVIDER,
             model: config.AI_MODEL,
             baseUrl: config.AI_BASE_URL,
-            ollamaAvailable: isOllamaAvailable(),
+            aiAvailable: isAIAvailable(),
           },
           google: {
             configured: !!(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET),
@@ -53,7 +53,7 @@ export class AdminController {
         provider: config.AI_PROVIDER,
         model: config.AI_MODEL,
         baseUrl: config.AI_BASE_URL,
-        ollamaAvailable: isOllamaAvailable(),
+        ollamaAvailable: isAIAvailable(),
       },
     });
   }

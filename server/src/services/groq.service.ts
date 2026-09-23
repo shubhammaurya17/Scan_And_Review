@@ -173,7 +173,10 @@ Topics:`;
         },
         body: JSON.stringify({
           model: this.model,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant that writes Google reviews. Follow the user instructions exactly. Output only what is asked, no preamble.' },
+            { role: 'user', content: prompt },
+          ],
           temperature,
           max_tokens: maxTokens,
         }),
@@ -183,6 +186,54 @@ Topics:`;
       clearTimeout(timeout);
 
       if (!res.ok) {
+        const errorBody = await res.text().catch(() => 'no body');
+        console.error(`Groq API error ${res.status}: ${errorBody}`);
+
+        // If 404 (model not found), try fallback model
+        if (res.status === 404 && this.model !== 'llama3-8b-8192') {
+          console.log(`Retrying with fallback model llama3-8b-8192...`);
+          return this.generateWithModel('llama3-8b-8192', prompt, temperature, maxTokens);
+        }
+
+        throw new Error(`Groq API error: ${res.status}`);
+      }
+
+      const data = await res.json() as ChatCompletionResponse;
+      return data.choices[0]?.message?.content || '';
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
+    }
+  }
+
+  private async generateWithModel(model: string, prompt: string, temperature: number, maxTokens: number): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const res = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant that writes Google reviews. Follow the user instructions exactly. Output only what is asked, no preamble.' },
+            { role: 'user', content: prompt },
+          ],
+          temperature,
+          max_tokens: maxTokens,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => 'no body');
+        console.error(`Groq fallback model error ${res.status}: ${errorBody}`);
         throw new Error(`Groq API error: ${res.status}`);
       }
 

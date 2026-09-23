@@ -1,92 +1,213 @@
 import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult } from './ai.service';
 
+/**
+ * Extract the topic noun from a question like "How was the service?" → "service"
+ */
+function extractTopic(questionText: string): string {
+  let topic = questionText
+    .replace(/^\s*(how\s+(was|is|are|were)\s+(the\s+)?)/i, '')
+    .replace(/^\s*(rate\s+(the\s+)?)/i, '')
+    .replace(/^\s*(what\s+did\s+you\s+think\s+(of|about)\s+(the\s+)?)/i, '')
+    .replace(/\?+\s*$/, '')
+    .trim()
+    .toLowerCase();
+
+  // Fallback: if we didn't extract anything meaningful, use original minus question mark
+  if (!topic || topic.length < 2) {
+    topic = questionText.replace(/\?+\s*$/, '').trim().toLowerCase();
+  }
+
+  return topic;
+}
+
+// Randomize phrasing to avoid repetition
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 export class TemplateService implements IAIService {
   async isAvailable(): Promise<boolean> {
-    return true; // Template service is always available
+    return true;
   }
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
     const avgRating = input.averageRating;
-    const highestRated = [...input.ratings].sort((a, b) => b.rating - a.rating)[0];
-    const lowestRated = [...input.ratings].sort((a, b) => a.rating - b.rating)[0];
+    const highTopic = extractTopic(
+      [...input.ratings].sort((a, b) => b.rating - a.rating)[0]?.questionText || ''
+    );
+    const lowTopic = extractTopic(
+      [...input.ratings].sort((a, b) => a.rating - b.rating)[0]?.questionText || ''
+    );
+    const highRating = [...input.ratings].sort((a, b) => b.rating - a.rating)[0]?.rating || 0;
+    const lowRating = [...input.ratings].sort((a, b) => a.rating - b.rating)[0]?.rating || 0;
+    const sameTopic = highTopic === lowTopic;
     const businessName = input.businessName;
     const commentPart = input.comment ? ` ${input.comment}` : '';
 
-    // Professional — natural, specific
+    // ─── Professional ─────────────────────────────
     let professional = '';
     if (avgRating >= 4) {
-      professional = `Visited ${businessName} and had a really solid experience overall.`;
-      if (highestRated && highestRated.rating >= 4) {
-        professional += ` The ${highestRated.questionText.toLowerCase()} really stood out — ${highestRated.rating === 5 ? 'genuinely impressive' : 'well above average'}.`;
+      professional = pick([
+        `Visited ${businessName} and had a really solid experience.`,
+        `Had a great visit to ${businessName} — impressed overall.`,
+        `${businessName} delivered a quality experience across the board.`,
+      ]);
+      if (highRating >= 4) {
+        professional += ' ' + pick([
+          `The ${highTopic} really stood out — ${highRating === 5 ? 'genuinely impressive' : 'well above average'}.`,
+          `Particularly pleased with the ${highTopic} — ${highRating === 5 ? 'top-tier' : 'definitely a strong point'}.`,
+          `The ${highTopic} was ${highRating === 5 ? 'excellent, honestly one of the best I\'ve experienced' : 'really well done'}.`,
+        ]);
       }
-      if (lowestRated && lowestRated.rating <= 3 && lowestRated !== highestRated) {
-        professional += ` The ${lowestRated.questionText.toLowerCase()} has a bit of room to improve, but nothing that would keep me from coming back.`;
+      if (!sameTopic && lowRating <= 3) {
+        professional += ' ' + pick([
+          `The ${lowTopic} has some room to grow, but nothing that would stop me from returning.`,
+          `Minor note: the ${lowTopic} could be a touch better.`,
+          `Only small area for improvement would be the ${lowTopic}.`,
+        ]);
       }
     } else if (avgRating >= 3) {
-      professional = `My visit to ${businessName} was a mixed bag.`;
-      if (highestRated && highestRated.rating >= 4) {
-        professional += ` The ${highestRated.questionText.toLowerCase()} was a highlight.`;
+      professional = pick([
+        `My experience at ${businessName} was a mixed bag.`,
+        `${businessName} was decent, but inconsistent.`,
+        `Visited ${businessName} — some things were good, others not so much.`,
+      ]);
+      if (highRating >= 4) {
+        professional += ' ' + pick([
+          `The ${highTopic} was a definite highlight.`,
+          `On the bright side, the ${highTopic} was solid.`,
+        ]);
       }
-      if (lowestRated && lowestRated.rating <= 2) {
-        professional += ` Unfortunately, the ${lowestRated.questionText.toLowerCase()} fell short of expectations.`;
+      if (!sameTopic && lowRating <= 2) {
+        professional += ' ' + pick([
+          `Unfortunately, the ${lowTopic} fell short of expectations.`,
+          `The ${lowTopic} was disappointing and needs attention.`,
+        ]);
       }
-      professional += ` Has potential, but some areas need work.`;
+      professional += ' ' + pick([
+        `Has potential if they address the weak spots.`,
+        `Some areas need work, but I can see the potential.`,
+      ]);
     } else {
-      professional = `Disappointing visit to ${businessName}.`;
-      if (lowestRated && lowestRated.rating <= 2) {
-        professional += ` The ${lowestRated.questionText.toLowerCase()} was particularly lacking.`;
+      professional = pick([
+        `Disappointing visit to ${businessName}.`,
+        `Left ${businessName} feeling underwhelmed.`,
+        `${businessName} didn't meet expectations, unfortunately.`,
+      ]);
+      if (lowRating <= 2) {
+        professional += ' ' + pick([
+          `The ${lowTopic} was particularly lacking.`,
+          `The ${lowTopic} really let the experience down.`,
+        ]);
       }
-      if (highestRated && highestRated.rating >= 3) {
-        professional += ` The ${highestRated.questionText.toLowerCase()} was okay, but not enough to save the overall experience.`;
+      if (!sameTopic && highRating >= 3) {
+        professional += ' ' + pick([
+          `The ${highTopic} was passable, but not enough to save the visit.`,
+          `At least the ${highTopic} was okay.`,
+        ]);
       }
-      professional += ` Would need to see significant improvements before returning.`;
+      professional += ' ' + pick([
+        `Would need to see real improvements before giving it another chance.`,
+        `Hard to recommend in its current state.`,
+      ]);
     }
     if (commentPart) professional += commentPart;
 
-    // Friendly — casual, warm
+    // ─── Friendly ─────────────────────────────────
     let friendly = '';
     if (avgRating >= 4) {
-      friendly = `Really enjoyed my time at ${businessName}!`;
-      if (highestRated && highestRated.rating >= 4) {
-        friendly += ` Loved the ${highestRated.questionText.toLowerCase()} — ${highestRated.rating === 5 ? 'seriously top-notch!' : 'really well done.'}`;
+      friendly = pick([
+        `Really enjoyed my time at ${businessName}!`,
+        `Had such a good time at ${businessName}!`,
+        `${businessName} was a great experience!`,
+      ]);
+      if (highRating >= 4) {
+        friendly += ' ' + pick([
+          `Loved the ${highTopic} — ${highRating === 5 ? 'seriously top-notch!' : 'really well done.'}`,
+          `The ${highTopic} was amazing — ${highRating === 5 ? 'couldn\'t ask for better!' : 'really happy with it.'}`,
+        ]);
       }
-      if (lowestRated && lowestRated.rating <= 3 && lowestRated !== highestRated) {
-        friendly += ` The ${lowestRated.questionText.toLowerCase()} could be a little better, but honestly it's a minor thing.`;
+      if (!sameTopic && lowRating <= 3) {
+        friendly += ' ' + pick([
+          `The ${lowTopic} could be a little better, but honestly it's a minor thing.`,
+          `Only tiny thing — the ${lowTopic} was just okay.`,
+        ]);
       }
-      friendly += ` Would definitely come back!`;
+      friendly += ' ' + pick([
+        `Would definitely come back!`,
+        `Can't wait to visit again!`,
+        `Highly recommend checking it out!`,
+      ]);
     } else if (avgRating >= 3) {
-      friendly = `Went to ${businessName} — it was alright!`;
-      if (highestRated && highestRated.rating >= 4) {
-        friendly += ` The ${highestRated.questionText.toLowerCase()} was nice.`;
+      friendly = pick([
+        `Went to ${businessName} — it was alright!`,
+        `Checked out ${businessName} the other day.`,
+        `Stopped by ${businessName} recently.`,
+      ]);
+      if (highRating >= 4) {
+        friendly += ' ' + pick([
+          `The ${highTopic} was nice.`,
+          `Did enjoy the ${highTopic} at least!`,
+        ]);
       }
-      if (lowestRated && lowestRated.rating <= 2) {
-        friendly += ` Wasn't too happy with the ${lowestRated.questionText.toLowerCase()} though.`;
+      if (!sameTopic && lowRating <= 2) {
+        friendly += ' ' + pick([
+          `Wasn't too happy with the ${lowTopic} though.`,
+          `The ${lowTopic} could use some love.`,
+        ]);
       }
-      friendly += ` Not bad, not amazing — might give it another shot.`;
+      friendly += ' ' + pick([
+        `Not bad, not amazing — might give it another shot.`,
+        `Decent enough, might try again and see if it's better.`,
+      ]);
     } else {
-      friendly = `Had a tough experience at ${businessName}.`;
-      if (lowestRated && lowestRated.rating <= 2) {
-        friendly += ` The ${lowestRated.questionText.toLowerCase()} was a letdown.`;
+      friendly = pick([
+        `Had a tough experience at ${businessName}.`,
+        `Not gonna lie, ${businessName} was a bit of a letdown.`,
+        `Wish I had a better time at ${businessName}.`,
+      ]);
+      if (lowRating <= 2) {
+        friendly += ' ' + pick([
+          `The ${lowTopic} really didn't do it for me.`,
+          `The ${lowTopic} was a real letdown.`,
+        ]);
       }
-      friendly += ` Hope they work on things — I'd love a reason to come back.`;
+      friendly += ' ' + pick([
+        `Hope they work on things — I'd love a reason to come back.`,
+        `Hoping things improve because the concept is nice.`,
+      ]);
     }
     if (commentPart) friendly += commentPart;
 
-    // Concise — short and punchy
+    // ─── Concise ──────────────────────────────────
     let concise = '';
     if (avgRating >= 4) {
-      concise = `Great experience at ${businessName}.`;
-      if (highestRated && highestRated.rating >= 4) {
-        concise += ` ${highestRated.questionText} was excellent.`;
+      concise = pick([
+        `Great experience at ${businessName}.`,
+        `${businessName} — really good.`,
+        `Solid visit to ${businessName}.`,
+      ]);
+      if (highRating >= 4) {
+        concise += ' ' + pick([
+          `${highTopic.charAt(0).toUpperCase() + highTopic.slice(1)} was excellent.`,
+          `Standout ${highTopic}.`,
+        ]);
       }
-      concise += ` Recommended.`;
+      concise += ' ' + pick([`Recommended.`, `Would go again.`, `Worth a visit.`]);
     } else if (avgRating >= 3) {
-      concise = `${businessName} was decent.`;
-      if (highestRated && highestRated.rating >= 4) concise += ` Good ${highestRated.questionText.toLowerCase()}.`;
-      if (lowestRated && lowestRated.rating <= 2) concise += ` ${lowestRated.questionText} needs work.`;
+      concise = pick([
+        `${businessName} was decent.`,
+        `${businessName} — okay, nothing special.`,
+      ]);
+      if (highRating >= 4) concise += ` Good ${highTopic}.`;
+      if (!sameTopic && lowRating <= 2) concise += ` ${lowTopic.charAt(0).toUpperCase() + lowTopic.slice(1)} needs work.`;
     } else {
-      concise = `${businessName} was below expectations.`;
-      if (lowestRated) concise += ` ${lowestRated.questionText} was the main issue.`;
+      concise = pick([
+        `${businessName} was below expectations.`,
+        `${businessName} — not great.`,
+        `Wouldn't recommend ${businessName} right now.`,
+      ]);
+      if (lowRating <= 2) concise += ` ${lowTopic.charAt(0).toUpperCase() + lowTopic.slice(1)} was the main issue.`;
     }
     if (commentPart) concise += commentPart;
 

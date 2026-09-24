@@ -183,14 +183,20 @@ export class ReviewService {
 
     try {
       drafts = await aiService.generateReviewDrafts(draftInput);
+      // Filter out any drafts with empty content
+      drafts = drafts.filter(d => d.content && d.content.trim().length > 0);
     } catch (err) {
       console.error('AI service threw during draft generation:', err);
       // drafts stays [] — will trigger template fallback below
     }
 
-    // If AI service returned no drafts (e.g. Ollama generation failed or threw), fall back to templates
-    if (drafts.length === 0) {
-      console.warn('AI service returned 0 drafts — falling back to template generation');
+    // If AI service returned fewer than 3 valid drafts, fall back to templates entirely
+    if (drafts.length < 3) {
+      if (drafts.length > 0) {
+        console.warn(`AI service returned only ${drafts.length} valid drafts — falling back to template generation`);
+      } else {
+        console.warn('AI service returned 0 drafts — falling back to template generation');
+      }
       const templateService = new TemplateService();
       drafts = await templateService.generateReviewDrafts(draftInput);
     }

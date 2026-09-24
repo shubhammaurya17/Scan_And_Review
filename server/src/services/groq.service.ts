@@ -9,6 +9,15 @@ export class GroqService implements IAIService {
   private baseUrl: string;
   private model: string;
   private apiKey: string;
+  // Ordered fallback list — first available model wins
+  private static readonly FALLBACK_MODELS = [
+    'openai/gpt-oss-20b',
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'qwen/qwen3.8-27b',
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+  ];
+  private resolvedModel: string | null = null;
 
   constructor() {
     this.baseUrl = config.AI_BASE_URL;
@@ -26,7 +35,35 @@ export class GroqService implements IAIService {
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      return res.ok;
+      if (!res.ok) return false;
+
+      // Log available models on startup and find a working model
+      try {
+        const data = await res.json() as { data: Array<{ id: string }> };
+        const ids = data.data.map(m => m.id);
+        console.log(`📋 Groq available models: ${ids.join(', ')}`);
+
+        // Check configured model first, then fallbacks
+        const candidates = [this.model, ...GroqService.FALLBACK_MODELS];
+        for (const candidate of candidates) {
+          if (ids.includes(candidate)) {
+            this.resolvedModel = candidate;
+            if (candidate !== this.model) {
+              console.log(`⚠️ Configured model "${this.model}" not available, using "${candidate}" instead`);
+            } else {
+              console.log(`✅ Using model: ${candidate}`);
+            }
+            break;
+          }
+        }
+        if (!this.resolvedModel) {
+          console.error(`❌ None of the configured/fallback models are available. Available: ${ids.join(', ')}`);
+        }
+      } catch {
+        // If we can't parse models list, we'll try the configured model anyway
+      }
+
+      return true;
     } catch {
       return false;
     }
@@ -161,49 +198,9 @@ Topics:`;
   }
 
   private async generate(prompt: string, temperature: number, maxTokens: number): Promise<string> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const res = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant that writes Google reviews. Follow the user instructions exactly. Output only what is asked, no preamble.' },
-            { role: 'user', content: prompt },
-          ],
-          temperature,
-          max_tokens: maxTokens,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!res.ok) {
-        const errorBody = await res.text().catch(() => 'no body');
-        console.error(`Groq API error ${res.status}: ${errorBody}`);
-
-        // If 404 (model not found), try fallback model
-        if (res.status === 404 && this.model !== 'llama-3.3-70b-versatile') {
-          console.log(`Retrying with fallback model llama-3.3-70b-versatile...`);
-          return this.generateWithModel('llama-3.3-70b-versatile', prompt, temperature, maxTokens);
-        }
-
-        throw new Error(`Groq API error: ${res.status}`);
-      }
-
-      const data = await res.json() as ChatCompletionResponse;
-      return data.choices[0]?.message?.content || '';
-    } catch (err) {
-      clearTimeout(timeout);
-      throw err;
-    }
+    // Use the resolved model from isAvailable(), or fall back to configured model
+    const model = this.resolvedModel || this.model;
+    return this.generateWithModel(model, prompt, temperature, maxTokens);
   }
 
   private async generateWithModel(model: string, prompt: string, temperature: number, maxTokens: number): Promise<string> {
@@ -233,7 +230,25 @@ Topics:`;
 
       if (!res.ok) {
         const errorBody = await res.text().catch(() => 'no body');
-        console.error(`Groq fallback model error ${res.status}: ${errorBody}`);
+        console.error(`Groq API error ${res.status} (model: ${model}): ${errorBody}`);
+
+        // If model not found, try next fallback
+        if (res.status === 404) {
+          const fallbacks = GroqService.FALLBACK_MODELS.filter(m => m !== model && m !== this.model);
+          for (const fallback of fallbacks) {
+            try {
+              console.log(`Retrying with fallback model ${fallback}...`);
+              const result = await this.generateWithModel(fallback, prompt, temperature, maxTokens);
+              // Cache the working model for future calls
+              this.resolvedModel = fallback;
+              return result;
+            } catch (e: any) {
+              if (e.message?.includes('404')) continue;
+              throw e;
+            }
+          }
+        }
+
         throw new Error(`Groq API error: ${res.status}`);
       }
 

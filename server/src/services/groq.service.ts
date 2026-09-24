@@ -190,9 +190,9 @@ Topics:`;
         console.error(`Groq API error ${res.status}: ${errorBody}`);
 
         // If 404 (model not found), try fallback model
-        if (res.status === 404 && this.model !== 'llama3-8b-8192') {
-          console.log(`Retrying with fallback model llama3-8b-8192...`);
-          return this.generateWithModel('llama3-8b-8192', prompt, temperature, maxTokens);
+        if (res.status === 404 && this.model !== 'llama-3.3-70b-versatile') {
+          console.log(`Retrying with fallback model llama-3.3-70b-versatile...`);
+          return this.generateWithModel('llama-3.3-70b-versatile', prompt, temperature, maxTokens);
         }
 
         throw new Error(`Groq API error: ${res.status}`);

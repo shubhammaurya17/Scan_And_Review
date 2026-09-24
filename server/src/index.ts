@@ -11,6 +11,18 @@ import { generalLimiter } from './middleware/rateLimit';
 
 const app = express();
 
+// Health check — registered before all middleware so it always responds
+app.get('/api/health', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+  });
+});
+
 // Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
@@ -31,7 +43,8 @@ if (config.NODE_ENV === 'production') {
   app.use(express.static(clientDist));
 
   // SPA catch-all: any non-API route serves index.html for client-side routing
-  app.get('*', (_req, res) => {
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }

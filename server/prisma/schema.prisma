@@ -149,17 +149,19 @@ model FunnelEvent {
 }
 
 model GoogleConnection {
-  id           String   @id @default(cuid())
-  businessId   String   @unique
-  accessToken  String?
-  refreshToken String?
-  tokenExpiry  DateTime?
-  status       String   @default("DISCONNECTED")
-  lastSyncAt   DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  syncError    String?
-  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  id                String   @id @default(cuid())
+  businessId        String   @unique
+  accessToken       String?
+  refreshToken      String?
+  tokenExpiry       DateTime?
+  status            String   @default("DISCONNECTED")
+  lastSyncAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  syncError         String?
+  googleRating      Float?
+  googleReviewCount Int?
+  business          Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 
 model GoogleReview {

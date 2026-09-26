@@ -32,10 +32,13 @@ export class AnalyticsService {
       counts[e.eventType] = e._count;
     }
 
-    // Include Google review count (all-time, not date-filtered — these are synced from the business profile)
-    const googleReviewCount = await prisma.googleReview.count({
+    // Include Google review count from stored aggregate (from Places API), fallback to local count
+    const googleConnection = await prisma.googleConnection.findUnique({
       where: { businessId },
     });
+    const googleReviewCount = googleConnection?.googleReviewCount
+      ?? await prisma.googleReview.count({ where: { businessId } });
+    const googleRating = googleConnection?.googleRating ?? null;
 
     return {
       qrScans: counts['QR_SCANNED'] || 0,
@@ -48,6 +51,7 @@ export class AnalyticsService {
       googleHandoffs: counts['GOOGLE_HANDOFF'] || 0,
       googleRedirects: counts['GOOGLE_HANDOFF'] || 0,
       googleReviewCount,
+      googleRating,
     };
   }
 
@@ -77,22 +81,41 @@ export class AnalyticsService {
       }
     }
 
-    // Google reviews — all-time (synced from business profile, not date-filtered)
+    // Google reviews — use stored aggregate stats from Places API for accurate counts
+    const googleConnection = await prisma.googleConnection.findUnique({
+      where: { businessId },
+    });
+
+    // For average rating: use Google's aggregate rating weighted by their total review count
+    const googleAggregateRating = googleConnection?.googleRating ?? null;
+    const googleTotalCount = googleConnection?.googleReviewCount ?? 0;
+
+    // Also load synced reviews for sentiment breakdown (only available for the 5 synced reviews)
     const googleReviews = await prisma.googleReview.findMany({
       where: { businessId },
     });
 
-    const googleReviewCount = googleReviews.length;
-    for (const review of googleReviews) {
-      if (review.rating >= 1 && review.rating <= 5) {
-        totalRating += review.rating;
-        ratingCount++;
-        ratingDistribution[review.rating - 1]++;
+    // Weighted average: combine app feedback ratings with Google's aggregate rating
+    let combinedRatingTotal = totalRating; // sum of app feedback averages
+    let combinedRatingCount = ratingCount; // number of app sessions with ratings
+
+    if (googleAggregateRating && googleTotalCount > 0) {
+      // Weight Google's aggregate by their total review count
+      combinedRatingTotal += googleAggregateRating * googleTotalCount;
+      combinedRatingCount += googleTotalCount;
+    } else {
+      // Fallback: use the synced review ratings
+      for (const review of googleReviews) {
+        if (review.rating >= 1 && review.rating <= 5) {
+          combinedRatingTotal += review.rating;
+          combinedRatingCount++;
+        }
       }
     }
 
+    const googleReviewCount = googleTotalCount || googleReviews.length;
     const totalFeedback = appFeedbackCount + googleReviewCount;
-    const avgRating = ratingCount > 0 ? totalRating / ratingCount : 0;
+    const avgRating = combinedRatingCount > 0 ? combinedRatingTotal / combinedRatingCount : 0;
 
     // Sentiment: combine app feedback + Google reviews
     let positive = 0;

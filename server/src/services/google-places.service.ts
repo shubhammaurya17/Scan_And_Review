@@ -9,6 +9,12 @@ export interface PlaceReview {
   publishedAt: Date;
 }
 
+export interface PlaceData {
+  reviews: PlaceReview[];
+  rating: number | null;
+  userRatingCount: number | null;
+}
+
 export class GooglePlacesService {
   private apiKey: string;
 
@@ -20,7 +26,7 @@ export class GooglePlacesService {
     return !!this.apiKey;
   }
 
-  async fetchReviews(placeId: string): Promise<PlaceReview[]> {
+  async fetchReviews(placeId: string): Promise<PlaceData> {
     if (!this.isConfigured()) {
       throw new AppError('Google Places API key is not configured on this server', 501);
     }
@@ -30,7 +36,7 @@ export class GooglePlacesService {
     const res = await fetch(url, {
       headers: {
         'X-Goog-Api-Key': this.apiKey,
-        'X-Goog-FieldMask': 'reviews',
+        'X-Goog-FieldMask': 'reviews,rating,userRatingCount',
       },
     });
 
@@ -54,20 +60,25 @@ export class GooglePlacesService {
         originalText?: { text?: string };
         publishTime?: string;
       }>;
+      rating?: number;
+      userRatingCount?: number;
     };
 
-    console.log(`📍 Places API response for ${placeId}: ${JSON.stringify(data).substring(0, 500)}`);
-    console.log(`📍 Reviews found: ${data.reviews?.length || 0}`);
+    console.log(`📍 Places API response for ${placeId}: rating=${data.rating}, userRatingCount=${data.userRatingCount}, reviews=${data.reviews?.length || 0}`);
 
     const reviews = data.reviews || [];
 
-    return reviews.map((r, i) => ({
-      googleId: r.name || `places/${placeId}/reviews/${i}`,
-      authorName: r.authorAttribution?.displayName || 'Anonymous',
-      rating: r.rating || 0,
-      comment: r.text?.text || r.originalText?.text || null,
-      publishedAt: r.publishTime ? new Date(r.publishTime) : new Date(),
-    }));
+    return {
+      reviews: reviews.map((r, i) => ({
+        googleId: r.name || `places/${placeId}/reviews/${i}`,
+        authorName: r.authorAttribution?.displayName || 'Anonymous',
+        rating: r.rating || 0,
+        comment: r.text?.text || r.originalText?.text || null,
+        publishedAt: r.publishTime ? new Date(r.publishTime) : new Date(),
+      })),
+      rating: data.rating ?? null,
+      userRatingCount: data.userRatingCount ?? null,
+    };
   }
 }
 

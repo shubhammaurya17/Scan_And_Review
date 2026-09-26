@@ -24,15 +24,15 @@ export class GoogleReviewsService {
     });
 
     try {
-      // Fetch reviews via Places API (returns up to 5 most relevant)
+      // Fetch reviews via Places API (returns up to 5 most relevant + aggregate stats)
       console.log(`🔄 Syncing reviews for business ${businessId}, placeId: ${business.googlePlaceId}`);
-      const placeReviews = await googlePlacesService.fetchReviews(business.googlePlaceId);
-      console.log(`🔄 Places API returned ${placeReviews.length} reviews`);
+      const placeData = await googlePlacesService.fetchReviews(business.googlePlaceId);
+      console.log(`🔄 Places API returned ${placeData.reviews.length} reviews, rating=${placeData.rating}, totalReviews=${placeData.userRatingCount}`);
 
       let totalUpserted = 0;
       let newReviews = 0;
 
-      for (const review of placeReviews) {
+      for (const review of placeData.reviews) {
         const existing = await prisma.googleReview.findUnique({ where: { googleId: review.googleId } });
 
         await prisma.googleReview.upsert({
@@ -60,17 +60,25 @@ export class GoogleReviewsService {
         totalUpserted++;
       }
 
-      // Update connection status
+      // Update connection status with aggregate stats from Google
       await prisma.googleConnection.update({
         where: { businessId },
-        data: { status: 'CONNECTED', lastSyncAt: new Date(), syncError: null },
+        data: {
+          status: 'CONNECTED',
+          lastSyncAt: new Date(),
+          syncError: null,
+          googleRating: placeData.rating,
+          googleReviewCount: placeData.userRatingCount,
+        },
       });
 
       return {
         message: 'Sync completed',
         reviewCount: totalUpserted,
         newReviews,
-        note: 'Google Places API returns up to 5 most relevant reviews per sync',
+        googleRating: placeData.rating,
+        googleReviewCount: placeData.userRatingCount,
+        note: 'Google Places API returns up to 5 most relevant reviews per sync; aggregate stats (rating, total count) are from the full Google profile',
       };
     } catch (err: any) {
       // Update connection with error

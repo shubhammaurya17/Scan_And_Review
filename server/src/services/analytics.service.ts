@@ -32,12 +32,9 @@ export class AnalyticsService {
       counts[e.eventType] = e._count;
     }
 
-    // Include Google review count
+    // Include Google review count (all-time, not date-filtered — these are synced from the business profile)
     const googleReviewCount = await prisma.googleReview.count({
-      where: {
-        businessId,
-        publishedAt: { gte: startDate, lte: endDate },
-      },
+      where: { businessId },
     });
 
     return {
@@ -49,6 +46,7 @@ export class AnalyticsService {
       draftsGenerated: counts['DRAFTS_GENERATED'] || 0,
       draftsSelected: counts['DRAFT_SELECTED'] || 0,
       googleHandoffs: counts['GOOGLE_HANDOFF'] || 0,
+      googleRedirects: counts['GOOGLE_HANDOFF'] || 0,
       googleReviewCount,
     };
   }
@@ -79,12 +77,9 @@ export class AnalyticsService {
       }
     }
 
-    // Google reviews — merge into stats
+    // Google reviews — all-time (synced from business profile, not date-filtered)
     const googleReviews = await prisma.googleReview.findMany({
-      where: {
-        businessId,
-        publishedAt: { gte: startDate, lte: endDate },
-      },
+      where: { businessId },
     });
 
     const googleReviewCount = googleReviews.length;

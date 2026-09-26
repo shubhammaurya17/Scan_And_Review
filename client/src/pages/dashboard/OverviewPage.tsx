@@ -43,11 +43,11 @@ export function OverviewPage() {
   const unreadAlertCount = alertsResult?.unreadCount || 0;
 
   const stats = [
-    { label: 'Total Feedback', value: feedback?.totalFeedback || 0, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
+    { label: 'QR Feedbacks', value: feedback?.sources?.appFeedback || 0, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
     { label: 'Average Rating', value: feedback?.averageRating?.toFixed(1) || '0.0', icon: TrendingUp, color: 'text-amber-600 bg-amber-50' },
     { label: 'Google Reviews', value: funnel?.googleReviewCount || 0, icon: Star, color: 'text-yellow-600 bg-yellow-50' },
     { label: 'Sessions Started', value: funnel?.sessionsStarted || 0, icon: Users, color: 'text-green-600 bg-green-50' },
-    { label: 'Google Handoffs', value: funnel?.googleHandoffs || 0, icon: ArrowRight, color: 'text-purple-600 bg-purple-50' },
+    { label: 'Google Redirects', value: funnel?.googleRedirects || funnel?.googleHandoffs || 0, icon: ArrowRight, color: 'text-purple-600 bg-purple-50' },
   ];
 
   return (
@@ -129,10 +129,10 @@ export function OverviewPage() {
             <div className="space-y-2">
               {[
                 { label: 'Sessions Started', value: funnel.sessionsStarted },
-                { label: 'Ratings Completed', value: funnel.ratingsCompleted },
+                { label: 'Ratings Selected', value: funnel.ratingsCompleted },
                 { label: 'Drafts Generated', value: funnel.draftsGenerated },
                 { label: 'Drafts Selected', value: funnel.draftsSelected },
-                { label: 'Google Handoffs', value: funnel.googleHandoffs },
+                { label: 'Google Redirects', value: funnel.googleRedirects || funnel.googleHandoffs },
               ].map((step, i, arr) => {
                 const prev = i === 0 ? step.value : arr[i - 1].value;
                 const rate = prev > 0 ? Math.round((step.value / prev) * 100) : 0;

@@ -117,24 +117,29 @@ export class AnalyticsService {
     const totalFeedback = appFeedbackCount + googleReviewCount;
     const avgRating = combinedRatingCount > 0 ? combinedRatingTotal / combinedRatingCount : 0;
 
-    // Sentiment: combine app feedback + Google reviews
+    // Sentiment: only from reviews we have actual rating data for (app sessions + synced Google reviews)
     let positive = 0;
     let negative = 0;
+    let sentimentTotal = 0;
 
     for (const session of sessions) {
       const avg = session.responses.length > 0
         ? session.responses.reduce((sum, r) => sum + r.rating, 0) / session.responses.length
         : 0;
-      if (avg >= 4) positive++;
-      else if (avg <= 2) negative++;
+      if (avg > 0) {
+        sentimentTotal++;
+        if (avg >= 4) positive++;
+        else if (avg <= 2) negative++;
+      }
     }
 
     for (const review of googleReviews) {
+      sentimentTotal++;
       if (review.rating >= 4) positive++;
       else if (review.rating <= 2) negative++;
     }
 
-    const neutral = totalFeedback - positive - negative;
+    const neutral = sentimentTotal - positive - negative;
 
     return {
       totalFeedback,
@@ -148,7 +153,7 @@ export class AnalyticsService {
         positive,
         neutral,
         negative,
-        total: totalFeedback,
+        total: sentimentTotal,
       },
       sources: {
         appFeedback: appFeedbackCount,

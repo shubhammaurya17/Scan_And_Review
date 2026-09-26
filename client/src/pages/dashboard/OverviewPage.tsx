@@ -75,7 +75,7 @@ export function OverviewPage() {
       </div>
 
       {/* Sentiment */}
-      {feedback && feedback.totalFeedback > 0 && (
+      {feedback && (feedback.sentiment?.total || 0) > 0 && (
         <Card>
           <CardContent>
             <h3 className="font-semibold mb-3">Sentiment Breakdown</h3>
@@ -88,7 +88,7 @@ export function OverviewPage() {
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-green-500 rounded-full"
-                    style={{ width: `${feedback.totalFeedback > 0 ? ((feedback.sentiment?.positive || 0) / feedback.totalFeedback * 100) : 0}%` }}
+                    style={{ width: `${feedback.sentiment?.total > 0 ? ((feedback.sentiment?.positive || 0) / feedback.sentiment.total * 100) : 0}%` }}
                   />
                 </div>
               </div>
@@ -100,7 +100,7 @@ export function OverviewPage() {
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gray-400 rounded-full"
-                    style={{ width: `${feedback.totalFeedback > 0 ? ((feedback.sentiment?.neutral || 0) / feedback.totalFeedback * 100) : 0}%` }}
+                    style={{ width: `${feedback.sentiment?.total > 0 ? ((feedback.sentiment?.neutral || 0) / feedback.sentiment.total * 100) : 0}%` }}
                   />
                 </div>
               </div>
@@ -112,7 +112,7 @@ export function OverviewPage() {
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-red-500 rounded-full"
-                    style={{ width: `${feedback.totalFeedback > 0 ? ((feedback.sentiment?.negative || 0) / feedback.totalFeedback * 100) : 0}%` }}
+                    style={{ width: `${feedback.sentiment?.total > 0 ? ((feedback.sentiment?.negative || 0) / feedback.sentiment.total * 100) : 0}%` }}
                   />
                 </div>
               </div>

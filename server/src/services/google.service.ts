@@ -103,12 +103,18 @@ export class GoogleService {
     return { status: 'DISCONNECTED' };
   }
 
+  isPlacesApiConfigured(): boolean {
+    return !!config.GOOGLE_PLACES_API_KEY;
+  }
+
   async getConnectionStatus(businessId: string) {
     const conn = await prisma.googleConnection.findUnique({ where: { businessId } });
     if (!conn) {
       return {
         status: 'DISCONNECTED',
         isConfigured: this.isConfigured(),
+        canSync: this.isPlacesApiConfigured(),
+        canPostReplies: false,
         lastSyncAt: null,
         syncError: null,
       };
@@ -127,6 +133,8 @@ export class GoogleService {
     return {
       status,
       isConfigured: this.isConfigured(),
+      canSync: this.isPlacesApiConfigured(),
+      canPostReplies: this.isConfigured() && status === 'CONNECTED',
       lastSyncAt: conn.lastSyncAt,
       syncError: conn.syncError || null,
     };

@@ -1,122 +1,61 @@
 import { prisma } from '../config/database';
 import { AppError } from '../utils/AppError';
+import { googlePlacesService } from './google-places.service';
 
 export class GoogleReviewsService {
   async syncReviews(businessId: string) {
-    const conn = await prisma.googleConnection.findUnique({ where: { businessId } });
-    if (!conn || conn.status === 'DISCONNECTED') {
-      throw new AppError('Google Business Profile is not connected', 400);
+    // Look up business to get googlePlaceId
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) {
+      throw new AppError('Business not found', 404);
+    }
+    if (!business.googlePlaceId) {
+      throw new AppError('Google Place ID is not configured for this business. Set it in Settings.', 400);
+    }
+    if (!googlePlacesService.isConfigured()) {
+      throw new AppError('Google Places API key is not configured on this server', 501);
     }
 
-    // Set status to SYNCING
-    await prisma.googleConnection.update({
+    // Ensure a GoogleConnection record exists for status tracking
+    await prisma.googleConnection.upsert({
       where: { businessId },
-      data: { status: 'SYNCING', syncError: null },
+      update: { status: 'SYNCING', syncError: null },
+      create: { businessId, status: 'SYNCING' },
     });
 
     try {
-      const { googleService } = await import('./google.service');
-      const accessToken = await googleService.getValidAccessToken(businessId);
-
-      // Step 1: Get accounts (Account Management API)
-      const accountsRes = await fetch(
-        'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-
-      if (!accountsRes.ok) {
-        const errText = await accountsRes.text();
-        throw new AppError(`Failed to fetch Google accounts: ${accountsRes.status} ${errText}`, accountsRes.status);
-      }
-
-      const accountsData = await accountsRes.json() as { accounts?: Array<{ name: string }> };
-      const accounts = accountsData.accounts || [];
-
-      if (accounts.length === 0) {
-        throw new AppError('No Google Business accounts found for this user', 404);
-      }
+      // Fetch reviews via Places API (returns up to 5 most relevant)
+      const placeReviews = await googlePlacesService.fetchReviews(business.googlePlaceId);
 
       let totalUpserted = 0;
       let newReviews = 0;
 
-      // Step 2: For each account, get locations and reviews
-      for (const account of accounts) {
-        const locationsRes = await fetch(
-          `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
+      for (const review of placeReviews) {
+        const existing = await prisma.googleReview.findUnique({ where: { googleId: review.googleId } });
 
-        if (!locationsRes.ok) continue;
+        await prisma.googleReview.upsert({
+          where: { googleId: review.googleId },
+          update: {
+            // Update review data but preserve local reply drafts
+            authorName: review.authorName,
+            rating: review.rating,
+            comment: review.comment,
+            publishedAt: review.publishedAt,
+          },
+          create: {
+            businessId,
+            googleId: review.googleId,
+            authorName: review.authorName,
+            rating: review.rating,
+            comment: review.comment,
+            publishedAt: review.publishedAt,
+            replyText: null,
+            repliedAt: null,
+          },
+        });
 
-        const locationsData = await locationsRes.json() as { locations?: Array<{ name: string }> };
-        const locations = locationsData.locations || [];
-
-        for (const location of locations) {
-          // Step 3: Fetch reviews for this location
-          let nextPageToken: string | undefined;
-          do {
-            const reviewsUrl = new URL(`https://mybusiness.googleapis.com/v4/${location.name}/reviews`);
-            if (nextPageToken) reviewsUrl.searchParams.set('pageToken', nextPageToken);
-            reviewsUrl.searchParams.set('pageSize', '50');
-
-            const reviewsRes = await fetch(reviewsUrl.toString(), {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
-
-            if (!reviewsRes.ok) break;
-
-            const reviewsData = await reviewsRes.json() as {
-              reviews?: Array<{
-                name: string;
-                reviewId: string;
-                reviewer: { displayName: string };
-                starRating: string;
-                comment?: string;
-                createTime: string;
-                reviewReply?: { comment: string; updateTime: string };
-              }>;
-              nextPageToken?: string;
-            };
-
-            const reviews = reviewsData.reviews || [];
-            nextPageToken = reviewsData.nextPageToken;
-
-            // Step 4: Upsert each review
-            for (const review of reviews) {
-              const googleId = review.name || review.reviewId;
-              const ratingMap: Record<string, number> = {
-                ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5,
-              };
-
-              const existing = await prisma.googleReview.findUnique({ where: { googleId } });
-
-              await prisma.googleReview.upsert({
-                where: { googleId },
-                update: {
-                  authorName: review.reviewer?.displayName || 'Anonymous',
-                  rating: ratingMap[review.starRating] || 0,
-                  comment: review.comment || null,
-                  publishedAt: new Date(review.createTime),
-                  replyText: review.reviewReply?.comment || null,
-                  repliedAt: review.reviewReply?.updateTime ? new Date(review.reviewReply.updateTime) : null,
-                },
-                create: {
-                  businessId,
-                  googleId,
-                  authorName: review.reviewer?.displayName || 'Anonymous',
-                  rating: ratingMap[review.starRating] || 0,
-                  comment: review.comment || null,
-                  publishedAt: new Date(review.createTime),
-                  replyText: review.reviewReply?.comment || null,
-                  repliedAt: review.reviewReply?.updateTime ? new Date(review.reviewReply.updateTime) : null,
-                },
-              });
-
-              if (!existing) newReviews++;
-              totalUpserted++;
-            }
-          } while (nextPageToken);
-        }
+        if (!existing) newReviews++;
+        totalUpserted++;
       }
 
       // Update connection status
@@ -125,15 +64,20 @@ export class GoogleReviewsService {
         data: { status: 'CONNECTED', lastSyncAt: new Date(), syncError: null },
       });
 
-      return { message: 'Sync completed', reviewCount: totalUpserted, newReviews };
+      return {
+        message: 'Sync completed',
+        reviewCount: totalUpserted,
+        newReviews,
+        note: 'Google Places API returns up to 5 most relevant reviews per sync',
+      };
     } catch (err: any) {
       // Update connection with error
-      const status = err instanceof AppError && err.statusCode === 401 ? 'EXPIRED' : 'SYNC_ERROR';
       const syncError = err.message || 'Unknown sync error';
 
-      await prisma.googleConnection.update({
+      await prisma.googleConnection.upsert({
         where: { businessId },
-        data: { status, syncError },
+        update: { status: 'SYNC_ERROR', syncError },
+        create: { businessId, status: 'SYNC_ERROR', syncError },
       }).catch(() => {}); // Don't fail if this update fails
 
       throw err;

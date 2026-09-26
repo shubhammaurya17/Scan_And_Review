@@ -19,6 +19,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
+  GOOGLE_PLACES_API_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

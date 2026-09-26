@@ -5,7 +5,8 @@ import { googleApi } from '../../services/googleApi';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { Link2, RefreshCw, Unlink, ExternalLink } from 'lucide-react';
+import { Link2, RefreshCw, Unlink, ExternalLink, Info, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function GoogleConnectionPage() {
   const { currentBusiness } = useAuth();
@@ -76,11 +77,19 @@ export function GoogleConnectionPage() {
   }
 
   const status = data?.status || 'DISCONNECTED';
-  const isConfigured = data?.isConfigured !== false;
+  const canSync = data?.canSync === true;
+  const hasPlaceId = data?.hasPlaceId === true;
+  const canPostReplies = data?.canPostReplies === true;
+  const isOAuthConfigured = data?.isConfigured !== false;
+
+  // Sync is possible when Places API key is configured and business has a Place ID
+  const syncReady = canSync && hasPlaceId;
+  // Show sync controls when sync is ready OR there's an active sync status
+  const showSyncControls = syncReady || status === 'CONNECTED' || status === 'SYNCING' || status === 'SYNC_ERROR';
 
   const statusMeta: Record<string, { emoji: string; label: string; badge: 'success' | 'danger' | 'warning' | 'default' }> = {
     CONNECTED: { emoji: '🟢', label: 'Connected', badge: 'success' },
-    DISCONNECTED: { emoji: '🔴', label: 'Disconnected', badge: 'danger' },
+    DISCONNECTED: { emoji: '🔴', label: 'Not Synced', badge: 'danger' },
     EXPIRED: { emoji: '🟡', label: 'Expired', badge: 'warning' },
     SYNCING: { emoji: '🔵', label: 'Syncing...', badge: 'default' },
     SYNC_ERROR: { emoji: '⚠️', label: 'Sync Error', badge: 'danger' },
@@ -91,7 +100,7 @@ export function GoogleConnectionPage() {
     <div className="p-6 space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Google Connection</h1>
-        <p className="text-gray-500 text-sm">Connect your Google Business Profile to sync and reply to reviews</p>
+        <p className="text-gray-500 text-sm">Sync reviews from your Google Business Profile</p>
       </div>
 
       {toast && (
@@ -104,6 +113,7 @@ export function GoogleConnectionPage() {
         </div>
       )}
 
+      {/* Review Sync Card */}
       <Card>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
@@ -116,9 +126,9 @@ export function GoogleConnectionPage() {
                 <span className="font-semibold">{meta.label}</span>
                 <Badge variant={meta.badge}>{status}</Badge>
               </div>
-              {status === 'CONNECTED' && (
+              {data?.lastSyncAt && (
                 <p className="text-xs text-gray-500 mt-1">
-                  Last synced: {data?.lastSyncAt ? new Date(data.lastSyncAt).toLocaleString() : 'Never'}
+                  Last synced: {new Date(data.lastSyncAt).toLocaleString()}
                 </p>
               )}
             </div>
@@ -130,38 +140,71 @@ export function GoogleConnectionPage() {
             </div>
           )}
 
-          {!isConfigured ? (
+          {!canSync ? (
             <div className="bg-amber-50 text-amber-700 text-sm p-3 rounded-lg">
-              Google OAuth is not configured on this server. Contact your administrator.
+              Google Places API is not configured on this server. Contact your administrator.
             </div>
-          ) : status === 'CONNECTED' || status === 'SYNCING' || status === 'SYNC_ERROR' ? (
-            <div className="flex gap-2">
-              <Button
-                variant="primary"
-                size="sm"
-                isLoading={isSyncing || status === 'SYNCING'}
-                disabled={status === 'SYNCING'}
-                onClick={handleSync}
-              >
-                <RefreshCw size={16} className="mr-1.5" />
-                {status === 'SYNCING' ? 'Syncing...' : status === 'SYNC_ERROR' ? 'Retry Sync' : 'Sync Now'}
-              </Button>
-              <Button variant="outline" size="sm" isLoading={isDisconnecting} onClick={handleDisconnect}>
-                <Unlink size={16} className="mr-1.5" /> Disconnect
-              </Button>
+          ) : !hasPlaceId ? (
+            <div className="bg-amber-50 text-amber-700 text-sm p-3 rounded-lg flex items-start gap-2">
+              <Settings size={16} className="mt-0.5 shrink-0" />
+              <div>
+                <p>Set your Google Place ID in business settings to enable review sync.</p>
+                <Link to="/dashboard/settings" className="text-amber-800 underline text-xs font-medium">
+                  Go to Settings →
+                </Link>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {status === 'EXPIRED' && (
-                <p className="text-sm text-amber-600">Your connection has expired. Please reconnect.</p>
-              )}
-              <Button variant="primary" size="sm" isLoading={isConnecting} onClick={handleConnect}>
-                <ExternalLink size={16} className="mr-1.5" /> Connect Google Business Profile
-              </Button>
+          ) : showSyncControls ? (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  isLoading={isSyncing || status === 'SYNCING'}
+                  disabled={status === 'SYNCING'}
+                  onClick={handleSync}
+                >
+                  <RefreshCw size={16} className="mr-1.5" />
+                  {status === 'SYNCING' ? 'Syncing...' : status === 'SYNC_ERROR' ? 'Retry Sync' : 'Sync Reviews'}
+                </Button>
+              </div>
+              <div className="flex items-start gap-1.5 text-xs text-gray-500">
+                <Info size={14} className="mt-0.5 shrink-0" />
+                <span>Google provides up to 5 most relevant reviews per sync. Sync regularly to accumulate more reviews.</span>
+              </div>
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
+
+      {/* OAuth Card (for reply posting) */}
+      {isOAuthConfigured && (
+        <Card>
+          <CardContent className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-700">Reply Posting (Optional)</h3>
+            <p className="text-xs text-gray-500">
+              Connect via Google OAuth to post replies directly to Google reviews. Without this, replies are saved as local drafts.
+            </p>
+            {canPostReplies ? (
+              <div className="flex items-center gap-3">
+                <Badge variant="success">OAuth Connected</Badge>
+                <Button variant="outline" size="sm" isLoading={isDisconnecting} onClick={handleDisconnect}>
+                  <Unlink size={16} className="mr-1.5" /> Disconnect
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {status === 'EXPIRED' && (
+                  <p className="text-sm text-amber-600">Your OAuth connection has expired. Please reconnect.</p>
+                )}
+                <Button variant="outline" size="sm" isLoading={isConnecting} onClick={handleConnect}>
+                  <ExternalLink size={16} className="mr-1.5" /> Connect Google OAuth
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -8,7 +8,14 @@ export class GoogleController {
   async getStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const status = await googleService.getConnectionStatus(req.params.businessId);
-      res.json({ success: true, data: status });
+      const business = await prisma.business.findUnique({
+        where: { id: req.params.businessId },
+        select: { googlePlaceId: true },
+      });
+      res.json({
+        success: true,
+        data: { ...status, hasPlaceId: !!business?.googlePlaceId },
+      });
     } catch (err) {
       next(err);
     }

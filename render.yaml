@@ -39,5 +39,7 @@ services:
         sync: false
       - key: GOOGLE_REDIRECT_URI
         value: https://reputeai-c7v3.onrender.com/api/google/callback
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false
       - key: NODE_VERSION
         value: "20"

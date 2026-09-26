@@ -7,7 +7,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { StarRating } from '../../components/ui/StarRating';
 import { Badge } from '../../components/ui/Badge';
-import { Bot, Send, Link2 } from 'lucide-react';
+import { Bot, Send, Save, Link2, Info } from 'lucide-react';
 
 const TONES = ['Professional', 'Friendly', 'Grateful', 'Apologetic', 'Concise'];
 
@@ -28,12 +28,14 @@ export function GoogleReviewsPage() {
     enabled: !!businessId,
   });
 
-  const isConnected = statusData?.status === 'CONNECTED';
+  const canSync = statusData?.canSync && statusData?.hasPlaceId;
+  const canPostReplies = statusData?.canPostReplies === true;
 
+  // Load reviews if sync is available or if there might be existing reviews
   const { data, isLoading } = useQuery({
     queryKey: ['google-reviews', businessId, page],
     queryFn: () => googleApi.getReviews(businessId, page).then(r => r.data),
-    enabled: !!businessId && isConnected,
+    enabled: !!businessId,
   });
 
   const reviews = data?.data || [];
@@ -68,14 +70,15 @@ export function GoogleReviewsPage() {
     }
   };
 
-  if (!isConnected) {
+  // Show setup prompt if sync is not available and no reviews exist
+  if (!canSync && reviews.length === 0 && !isLoading) {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold text-gray-900">Google Reviews</h1>
         <Card className="mt-6">
           <CardContent className="text-center py-10">
             <Link2 size={32} className="mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-600 mb-4">Connect your Google Business Profile to view and reply to reviews.</p>
+            <p className="text-gray-600 mb-4">Set up your Google Place ID and sync to view reviews.</p>
             <Link to="/dashboard/google-connection">
               <Button variant="primary" size="sm">Go to Google Connection</Button>
             </Link>
@@ -161,15 +164,26 @@ export function GoogleReviewsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="Generated reply will appear here — you can edit before posting"
                     />
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      isLoading={isPosting}
-                      disabled={!draft.trim()}
-                      onClick={() => handlePost(review.id)}
-                    >
-                      <Send size={16} className="mr-1.5" /> Post Reply
-                    </Button>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        isLoading={isPosting}
+                        disabled={!draft.trim()}
+                        onClick={() => handlePost(review.id)}
+                      >
+                        {canPostReplies ? (
+                          <><Send size={16} className="mr-1.5" /> Post Reply</>
+                        ) : (
+                          <><Save size={16} className="mr-1.5" /> Save Reply</>
+                        )}
+                      </Button>
+                      {!canPostReplies && (
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <Info size={12} /> Reply saved locally — connect OAuth to post to Google
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>

@@ -20,7 +20,7 @@ services:
           name: reputeai-db
           property: connectionString
       - key: CLIENT_URL
-        value: https://reputeai.onrender.com
+        value: https://reputeai-c7v3.onrender.com
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -38,6 +38,6 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        value: https://reputeai.onrender.com/api/google/callback
+        value: https://reputeai-c7v3.onrender.com/api/google/callback
       - key: NODE_VERSION
         value: "20"

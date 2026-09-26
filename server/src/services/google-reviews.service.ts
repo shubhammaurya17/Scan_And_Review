@@ -18,9 +18,9 @@ export class GoogleReviewsService {
       const { googleService } = await import('./google.service');
       const accessToken = await googleService.getValidAccessToken(businessId);
 
-      // Step 1: Get accounts
+      // Step 1: Get accounts (Account Management API)
       const accountsRes = await fetch(
-        'https://mybusinessbusinessinformation.googleapis.com/v1/accounts',
+        'https://mybusinessaccountmanagement.googleapis.com/v1/accounts',
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 

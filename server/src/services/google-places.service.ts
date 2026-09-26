@@ -56,6 +56,9 @@ export class GooglePlacesService {
       }>;
     };
 
+    console.log(`📍 Places API response for ${placeId}: ${JSON.stringify(data).substring(0, 500)}`);
+    console.log(`📍 Reviews found: ${data.reviews?.length || 0}`);
+
     const reviews = data.reviews || [];
 
     return reviews.map((r, i) => ({

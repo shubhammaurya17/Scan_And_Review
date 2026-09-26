@@ -25,7 +25,9 @@ export class GoogleReviewsService {
 
     try {
       // Fetch reviews via Places API (returns up to 5 most relevant)
+      console.log(`🔄 Syncing reviews for business ${businessId}, placeId: ${business.googlePlaceId}`);
       const placeReviews = await googlePlacesService.fetchReviews(business.googlePlaceId);
+      console.log(`🔄 Places API returned ${placeReviews.length} reviews`);
 
       let totalUpserted = 0;
       let newReviews = 0;

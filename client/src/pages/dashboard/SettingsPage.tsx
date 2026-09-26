@@ -6,6 +6,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
+import { Trash2 } from 'lucide-react';
 
 export function SettingsPage() {
   const { currentBusiness } = useAuth();
@@ -19,6 +20,8 @@ export function SettingsPage() {
   });
 
   const [form, setForm] = useState<Record<string, string>>({});
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetToast, setResetToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const updateMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => businessApi.updateBusiness(businessId, data),
@@ -119,6 +122,48 @@ export function SettingsPage() {
               Save Changes
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card>
+        <CardContent>
+          <h3 className="text-lg font-semibold text-red-600 mb-2">Danger Zone</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Clear all feedback, sessions, analytics, alerts, and synced Google reviews for this business.
+            This action cannot be undone. Your business profile and settings will be preserved.
+          </p>
+
+          {resetToast && (
+            <div className={`mb-4 p-3 rounded-lg text-sm ${
+              resetToast.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            }`}>
+              {resetToast.message}
+            </div>
+          )}
+
+          <Button
+            variant="danger"
+            size="sm"
+            isLoading={isResetting}
+            onClick={async () => {
+              if (!confirm('Are you sure you want to clear ALL data? This will delete all feedback, reviews, analytics, and alerts.')) return;
+              if (!confirm('This CANNOT be undone. Type OK to proceed.')) return;
+              setIsResetting(true);
+              try {
+                await businessApi.resetData(businessId);
+                setResetToast({ type: 'success', message: 'All data cleared successfully. You can now sync fresh data.' });
+                queryClient.invalidateQueries();
+              } catch (err: any) {
+                setResetToast({ type: 'error', message: err?.response?.data?.error || 'Failed to clear data' });
+              } finally {
+                setIsResetting(false);
+                setTimeout(() => setResetToast(null), 5000);
+              }
+            }}
+          >
+            <Trash2 size={16} className="mr-1.5" /> Clear All Data
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -32,6 +32,14 @@ export class AnalyticsService {
       counts[e.eventType] = e._count;
     }
 
+    // Include Google review count
+    const googleReviewCount = await prisma.googleReview.count({
+      where: {
+        businessId,
+        publishedAt: { gte: startDate, lte: endDate },
+      },
+    });
+
     return {
       qrScans: counts['QR_SCANNED'] || 0,
       pageLoads: counts['PAGE_LOADED'] || 0,
@@ -41,10 +49,12 @@ export class AnalyticsService {
       draftsGenerated: counts['DRAFTS_GENERATED'] || 0,
       draftsSelected: counts['DRAFT_SELECTED'] || 0,
       googleHandoffs: counts['GOOGLE_HANDOFF'] || 0,
+      googleReviewCount,
     };
   }
 
   async getFeedbackStats(businessId: string, startDate: Date, endDate: Date) {
+    // App feedback from review sessions
     const sessions = await prisma.reviewSession.findMany({
       where: {
         businessId,
@@ -54,7 +64,7 @@ export class AnalyticsService {
       include: { responses: true, feedback: true },
     });
 
-    const totalFeedback = sessions.length;
+    const appFeedbackCount = sessions.length;
     let totalRating = 0;
     let ratingCount = 0;
     const ratingDistribution = [0, 0, 0, 0, 0]; // index 0 = 1 star, etc.
@@ -69,21 +79,43 @@ export class AnalyticsService {
       }
     }
 
+    // Google reviews — merge into stats
+    const googleReviews = await prisma.googleReview.findMany({
+      where: {
+        businessId,
+        publishedAt: { gte: startDate, lte: endDate },
+      },
+    });
+
+    const googleReviewCount = googleReviews.length;
+    for (const review of googleReviews) {
+      if (review.rating >= 1 && review.rating <= 5) {
+        totalRating += review.rating;
+        ratingCount++;
+        ratingDistribution[review.rating - 1]++;
+      }
+    }
+
+    const totalFeedback = appFeedbackCount + googleReviewCount;
     const avgRating = ratingCount > 0 ? totalRating / ratingCount : 0;
 
-    // Sentiment based on average rating
-    const positive = sessions.filter(s => {
-      const avg = s.responses.length > 0
-        ? s.responses.reduce((sum, r) => sum + r.rating, 0) / s.responses.length
+    // Sentiment: combine app feedback + Google reviews
+    let positive = 0;
+    let negative = 0;
+
+    for (const session of sessions) {
+      const avg = session.responses.length > 0
+        ? session.responses.reduce((sum, r) => sum + r.rating, 0) / session.responses.length
         : 0;
-      return avg >= 4;
-    }).length;
-    const negative = sessions.filter(s => {
-      const avg = s.responses.length > 0
-        ? s.responses.reduce((sum, r) => sum + r.rating, 0) / s.responses.length
-        : 0;
-      return avg <= 2;
-    }).length;
+      if (avg >= 4) positive++;
+      else if (avg <= 2) negative++;
+    }
+
+    for (const review of googleReviews) {
+      if (review.rating >= 4) positive++;
+      else if (review.rating <= 2) negative++;
+    }
+
     const neutral = totalFeedback - positive - negative;
 
     return {
@@ -99,6 +131,10 @@ export class AnalyticsService {
         neutral,
         negative,
         total: totalFeedback,
+      },
+      sources: {
+        appFeedback: appFeedbackCount,
+        googleReviews: googleReviewCount,
       },
     };
   }
@@ -159,6 +195,30 @@ export class AnalyticsService {
     };
   }
 
+  async getGoogleReviewTrend(businessId: string) {
+    const reviews = await prisma.googleReview.findMany({
+      where: { businessId },
+      orderBy: { publishedAt: 'asc' },
+    });
+
+    const dailyData: Record<string, { totalRating: number; count: number }> = {};
+    for (const review of reviews) {
+      const date = review.publishedAt.toISOString().split('T')[0];
+      if (!dailyData[date]) {
+        dailyData[date] = { totalRating: 0, count: 0 };
+      }
+      dailyData[date].totalRating += review.rating;
+      dailyData[date].count++;
+    }
+
+    return Object.entries(dailyData).map(([date, data]) => ({
+      date,
+      averageRating: data.count > 0 ? Math.round((data.totalRating / data.count) * 10) / 10 : 0,
+      feedbackCount: data.count,
+      source: 'google' as const,
+    }));
+  }
+
   async getTimeSeriesData(businessId: string, startDate: Date, endDate: Date) {
     const sessions = await prisma.reviewSession.findMany({
       where: {
@@ -203,6 +263,44 @@ export class AnalyticsService {
     } catch {
       return { topics: {}, totalComments: 0 };
     }
+  }
+
+  async resetBusinessData(businessId: string) {
+    await prisma.$transaction([
+      // Delete AI replies (child of GoogleReview)
+      prisma.aIReply.deleteMany({
+        where: { review: { businessId } },
+      }),
+      // Delete Google reviews
+      prisma.googleReview.deleteMany({ where: { businessId } }),
+      // Delete review drafts (child of ReviewSession)
+      prisma.reviewDraft.deleteMany({
+        where: { session: { businessId } },
+      }),
+      // Delete customer feedback (child of ReviewSession)
+      prisma.customerFeedback.deleteMany({
+        where: { session: { businessId } },
+      }),
+      // Delete customer responses (child of ReviewSession)
+      prisma.customerResponse.deleteMany({
+        where: { session: { businessId } },
+      }),
+      // Delete review sessions
+      prisma.reviewSession.deleteMany({ where: { businessId } }),
+      // Delete funnel events
+      prisma.funnelEvent.deleteMany({ where: { businessId } }),
+      // Delete alerts
+      prisma.reputationAlert.deleteMany({ where: { businessId } }),
+      // Delete AI analyses
+      prisma.aIAnalysis.deleteMany({ where: { businessId } }),
+      // Reset Google connection (keep the record but clear sync state)
+      prisma.googleConnection.updateMany({
+        where: { businessId },
+        data: { lastSyncAt: null, syncError: null },
+      }),
+    ]);
+
+    return { message: 'All business data has been cleared successfully' };
   }
 }
 

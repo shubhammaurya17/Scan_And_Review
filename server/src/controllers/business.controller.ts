@@ -136,12 +136,13 @@ export class BusinessController {
       else if (period === 'today') startDate.setHours(0, 0, 0, 0);
       else startDate.setDate(endDate.getDate() - 30);
 
-      const [funnel, feedback] = await Promise.all([
+      const [funnel, feedback, googleReviewTrend] = await Promise.all([
         analyticsService.getFunnelMetrics(businessId, startDate, endDate),
         analyticsService.getFeedbackStats(businessId, startDate, endDate),
+        analyticsService.getGoogleReviewTrend(businessId),
       ]);
 
-      res.json({ success: true, data: { funnel, feedback } });
+      res.json({ success: true, data: { funnel, feedback, googleReviewTrend } });
     } catch (err) {
       next(err);
     }
@@ -212,6 +213,16 @@ export class BusinessController {
         orderBy: { name: 'asc' },
       });
       res.json({ success: true, data: categories });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // Reset all business data
+  async resetData(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await analyticsService.resetBusinessData(req.params.businessId);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

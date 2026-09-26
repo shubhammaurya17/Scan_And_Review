@@ -20,6 +20,7 @@ export function AnalyticsPage() {
 
   const feedback = analytics?.feedback;
   const funnel = analytics?.funnel;
+  const googleReviewTrend = analytics?.googleReviewTrend || [];
 
   const { data: feedbackList } = useQuery({
     queryKey: ['feedback-timeseries', businessId, period],
@@ -45,6 +46,13 @@ export function AnalyticsPage() {
         grouped[date].count++;
       }
     }
+    // Merge Google review trend data
+    for (const gr of googleReviewTrend) {
+      if (!grouped[gr.date]) grouped[gr.date] = { total: 0, count: 0, feedbackCount: 0 };
+      grouped[gr.date].feedbackCount += gr.feedbackCount;
+      grouped[gr.date].total += gr.averageRating * gr.feedbackCount;
+      grouped[gr.date].count += gr.feedbackCount;
+    }
     return Object.entries(grouped)
       .map(([date, d]) => ({
         date,
@@ -53,7 +61,7 @@ export function AnalyticsPage() {
       }))
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(-14);
-  }, [feedbackList]);
+  }, [feedbackList, googleReviewTrend]);
 
   const maxFeedbackCount = Math.max(1, ...dailyStats.map(d => d.feedbackCount));
   const topics: Record<string, number> = insights?.topics || {};
@@ -84,7 +92,14 @@ export function AnalyticsPage() {
       {feedback && (
         <Card>
           <CardContent>
-            <h3 className="font-semibold mb-4">Rating Distribution</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Rating Distribution</h3>
+              {feedback.sources && (
+                <span className="text-xs text-gray-400">
+                  {feedback.sources.appFeedback} app feedback · {feedback.sources.googleReviews} Google reviews
+                </span>
+              )}
+            </div>
             <div className="space-y-3">
               {[5, 4, 3, 2, 1].map(rating => {
                 const dist = feedback.ratingDistribution?.find((d: any) => d.rating === rating);
@@ -141,7 +156,7 @@ export function AnalyticsPage() {
       {/* Time Series */}
       <Card>
         <CardContent>
-          <h3 className="font-semibold mb-4">Daily Trend (Last 14 Days with Activity)</h3>
+          <h3 className="font-semibold mb-4">Daily Trend (Last 14 Days with Activity — App + Google)</h3>
           {dailyStats.length === 0 ? (
             <p className="text-gray-500 text-sm">Not enough data yet to show a trend.</p>
           ) : (

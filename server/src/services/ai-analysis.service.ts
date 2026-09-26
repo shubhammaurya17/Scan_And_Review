@@ -17,9 +17,23 @@ export class AIAnalysisService {
       .filter(s => s.feedback?.comment)
       .map(s => s.feedback!.comment!);
 
-    // Sentiment analysis on comments
+    // Also include Google review comments
+    const googleReviews = await prisma.googleReview.findMany({
+      where: {
+        businessId,
+        publishedAt: { gte: startDate, lte: endDate },
+        comment: { not: null },
+      },
+    });
+    const googleComments = googleReviews
+      .filter(r => r.comment && r.comment.trim().length > 0)
+      .map(r => r.comment!);
+
+    const allComments = [...comments, ...googleComments];
+
+    // Sentiment analysis on all comments (app + Google)
     const sentimentResults = await Promise.all(
-      comments.map(async (comment) => {
+      allComments.map(async (comment) => {
         try {
           return await aiService.analyzeSentiment(comment);
         } catch {
@@ -35,9 +49,9 @@ export class AIAnalysisService {
 
     // Topic detection
     let topics: string[] = [];
-    if (comments.length > 0) {
+    if (allComments.length > 0) {
       try {
-        topics = await aiService.detectTopics(comments);
+        topics = await aiService.detectTopics(allComments);
       } catch {
         topics = [];
       }
@@ -47,7 +61,7 @@ export class AIAnalysisService {
     await prisma.aIAnalysis.upsert({
       where: { id: `sentiment-${businessId}` },
       update: {
-        result: JSON.stringify({ sentimentCounts, totalComments: comments.length, sentimentResults: sentimentResults.map((r, i) => ({ comment: comments[i].substring(0, 100), ...r })) }),
+        result: JSON.stringify({ sentimentCounts, totalComments: allComments.length, sentimentResults: sentimentResults.map((r, i) => ({ comment: allComments[i].substring(0, 100), ...r })) }),
         periodStart: startDate,
         periodEnd: endDate,
       },
@@ -55,7 +69,7 @@ export class AIAnalysisService {
         id: `sentiment-${businessId}`,
         businessId,
         type: 'SENTIMENT',
-        result: JSON.stringify({ sentimentCounts, totalComments: comments.length, sentimentResults: sentimentResults.map((r, i) => ({ comment: comments[i].substring(0, 100), ...r })) }),
+        result: JSON.stringify({ sentimentCounts, totalComments: allComments.length, sentimentResults: sentimentResults.map((r, i) => ({ comment: allComments[i].substring(0, 100), ...r })) }),
         periodStart: startDate,
         periodEnd: endDate,
       },
@@ -71,7 +85,7 @@ export class AIAnalysisService {
     await prisma.aIAnalysis.upsert({
       where: { id: `topics-${businessId}` },
       update: {
-        result: JSON.stringify({ topics: topicFreq, totalComments: comments.length }),
+        result: JSON.stringify({ topics: topicFreq, totalComments: allComments.length }),
         periodStart: startDate,
         periodEnd: endDate,
       },
@@ -79,13 +93,13 @@ export class AIAnalysisService {
         id: `topics-${businessId}`,
         businessId,
         type: 'TOPICS',
-        result: JSON.stringify({ topics: topicFreq, totalComments: comments.length }),
+        result: JSON.stringify({ topics: topicFreq, totalComments: allComments.length }),
         periodStart: startDate,
         periodEnd: endDate,
       },
     });
 
-    return { sentimentCounts, topics: topicFreq, totalComments: comments.length };
+    return { sentimentCounts, topics: topicFreq, totalComments: allComments.length };
   }
 
   async getLatestAnalysis(businessId: string, type: string) {
@@ -132,11 +146,15 @@ export class AIAnalysisService {
       insights.push(`Top topics mentioned by customers: ${topTopics.map(([t, c]) => `${t} (${c}x)`).join(', ')}.`);
     }
 
-    // Feedback volume
-    const sessions = await prisma.reviewSession.count({
+    // Feedback volume (app + Google)
+    const sessions2 = await prisma.reviewSession.count({
       where: { businessId, createdAt: { gte: startDate, lte: endDate }, status: { not: 'STARTED' } },
     });
-    insights.push(`You received ${sessions} feedback submissions in the last 30 days.`);
+    const googleCount = await prisma.googleReview.count({
+      where: { businessId, publishedAt: { gte: startDate, lte: endDate } },
+    });
+    const totalSubmissions = sessions2 + googleCount;
+    insights.push(`You received ${totalSubmissions} total feedback items in the last 30 days (${sessions2} app feedback, ${googleCount} Google reviews).`);
 
     // Store insights
     await prisma.aIAnalysis.upsert({

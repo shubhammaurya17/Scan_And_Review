@@ -6,7 +6,7 @@ import { alertApi } from '../../services/alertApi';
 import { Card, CardContent } from '../../components/ui/Card';
 import { StarRating } from '../../components/ui/StarRating';
 import { Badge } from '../../components/ui/Badge';
-import { TrendingUp, Users, MessageSquare, ArrowRight, AlertTriangle, TrendingDown, Frown, Bell } from 'lucide-react';
+import { TrendingUp, Users, MessageSquare, ArrowRight, AlertTriangle, TrendingDown, Frown, Bell, Star } from 'lucide-react';
 
 const alertTypeMeta: Record<string, { icon: any; color: string }> = {
   LOW_RATING: { icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
@@ -45,6 +45,7 @@ export function OverviewPage() {
   const stats = [
     { label: 'Total Feedback', value: feedback?.totalFeedback || 0, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
     { label: 'Average Rating', value: feedback?.averageRating?.toFixed(1) || '0.0', icon: TrendingUp, color: 'text-amber-600 bg-amber-50' },
+    { label: 'Google Reviews', value: funnel?.googleReviewCount || 0, icon: Star, color: 'text-yellow-600 bg-yellow-50' },
     { label: 'Sessions Started', value: funnel?.sessionsStarted || 0, icon: Users, color: 'text-green-600 bg-green-50' },
     { label: 'Google Handoffs', value: funnel?.googleHandoffs || 0, icon: ArrowRight, color: 'text-purple-600 bg-purple-50' },
   ];
@@ -57,7 +58,7 @@ export function OverviewPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map(stat => (
           <Card key={stat.label}>
             <CardContent className="flex items-start gap-3">

@@ -59,3 +59,8 @@ export async function getQRConfig(businessId: string) {
   const { data } = await api.get(`/business/${businessId}/qr/config`);
   return data.data;
 }
+
+export async function resetData(businessId: string) {
+  const { data } = await api.delete(`/business/${businessId}/reset-data`);
+  return data.data;
+}

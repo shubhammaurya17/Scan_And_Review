@@ -35,4 +35,7 @@ router.get('/:businessId/qr/config', requireAuth, requireBusinessAccess(), busin
 router.get('/:businessId/ai/insights', requireAuth, requireBusinessAccess(), businessController.getAIInsights);
 router.post('/:businessId/ai/reply', requireAuth, requireBusinessAccess(), aiLimiter, googleController.generateAIReply);
 
+// Data management
+router.delete('/:businessId/reset-data', requireAuth, requireBusinessAccess(), businessController.resetData);
+
 export default router;

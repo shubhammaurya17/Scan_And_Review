@@ -90,12 +90,10 @@ export class AnalyticsService {
     const googleAggregateRating = googleConnection?.googleRating ?? null;
     const googleTotalCount = googleConnection?.googleReviewCount ?? 0;
 
-    // Also load synced reviews for rating distribution and sentiment (only available for synced reviews)
+    // Load ALL synced Google reviews (no date filter — Places API only gives ~5 most relevant,
+    // so date-filtering would exclude most/all of them and show empty distribution)
     const googleReviews = await prisma.googleReview.findMany({
-      where: {
-        businessId,
-        publishedAt: { gte: startDate, lte: endDate },
-      },
+      where: { businessId },
     });
 
     // Include synced Google reviews in rating distribution

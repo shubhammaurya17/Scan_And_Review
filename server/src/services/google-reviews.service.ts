@@ -25,32 +25,15 @@ export class GoogleReviewsService {
     });
 
     try {
-      // If the Place ID changed since last sync, clear old reviews from the previous store
-      const existingReviews = await prisma.googleReview.findMany({
-        where: { businessId },
-        select: { googleId: true },
-        take: 1,
-      });
-      if (existingReviews.length > 0) {
-        // Check if existing reviews belong to a different place by comparing googleId prefix
-        const oldPrefix = existingReviews[0].googleId.split('/reviews/')[0];
-        const newPrefix = `places/${business.googlePlaceId}`;
-        if (oldPrefix && !oldPrefix.includes(business.googlePlaceId)) {
-          console.log(`🔄 Place ID changed — clearing old reviews from previous store`);
-          // Delete AI replies first (foreign key), then old reviews, then old Google-sourced alerts
-          await prisma.aIReply.deleteMany({
-            where: { review: { businessId } },
-          });
-          await prisma.googleReview.deleteMany({ where: { businessId } });
-          await prisma.reputationAlert.deleteMany({
-            where: { businessId, sourceData: { contains: 'google_review' } },
-          });
-          // Reset aggregate stats
-          await prisma.googleConnection.update({
-            where: { businessId },
-            data: { googleRating: null, googleReviewCount: null },
-          });
-        }
+      // Always clear old reviews before syncing — Places API returns the latest 5 most relevant
+      // reviews each time, so we replace them to ensure data is fresh (especially after Place ID changes)
+      const oldReviewCount = await prisma.googleReview.count({ where: { businessId } });
+      if (oldReviewCount > 0) {
+        console.log(`🔄 Clearing ${oldReviewCount} old reviews before fresh sync`);
+        await prisma.aIReply.deleteMany({
+          where: { review: { businessId } },
+        });
+        await prisma.googleReview.deleteMany({ where: { businessId } });
       }
 
       // Fetch reviews via Places API (returns up to 5 most relevant + aggregate stats)
@@ -59,21 +42,10 @@ export class GoogleReviewsService {
       console.log(`🔄 Places API returned ${placeData.reviews.length} reviews, rating=${placeData.rating}, totalReviews=${placeData.userRatingCount}`);
 
       let totalUpserted = 0;
-      let newReviews = 0;
 
       for (const review of placeData.reviews) {
-        const existing = await prisma.googleReview.findUnique({ where: { googleId: review.googleId } });
-
-        await prisma.googleReview.upsert({
-          where: { googleId: review.googleId },
-          update: {
-            // Update review data but preserve local reply drafts
-            authorName: review.authorName,
-            rating: review.rating,
-            comment: review.comment,
-            publishedAt: review.publishedAt,
-          },
-          create: {
+        await prisma.googleReview.create({
+          data: {
             businessId,
             googleId: review.googleId,
             authorName: review.authorName,
@@ -84,8 +56,6 @@ export class GoogleReviewsService {
             repliedAt: null,
           },
         });
-
-        if (!existing) newReviews++;
         totalUpserted++;
       }
 
@@ -111,7 +81,6 @@ export class GoogleReviewsService {
       return {
         message: 'Sync completed',
         reviewCount: totalUpserted,
-        newReviews,
         googleRating: placeData.rating,
         googleReviewCount: placeData.userRatingCount,
         note: 'Google Places API returns up to 5 most relevant reviews per sync; aggregate stats (rating, total count) are from the full Google profile',

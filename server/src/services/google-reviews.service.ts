@@ -1,6 +1,7 @@
 import { prisma } from '../config/database';
 import { AppError } from '../utils/AppError';
 import { googlePlacesService } from './google-places.service';
+import { alertService } from './alert.service';
 
 export class GoogleReviewsService {
   async syncReviews(businessId: string) {
@@ -71,6 +72,13 @@ export class GoogleReviewsService {
           googleReviewCount: placeData.userRatingCount,
         },
       });
+
+      // Check Google reviews for alerts (low ratings, negative sentiment)
+      try {
+        await alertService.checkGoogleReviewAlerts(businessId);
+      } catch (alertErr) {
+        console.warn('Alert check after sync failed:', alertErr);
+      }
 
       return {
         message: 'Sync completed',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { googleApi } from '../../services/googleApi';
@@ -7,7 +7,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { StarRating } from '../../components/ui/StarRating';
 import { Badge } from '../../components/ui/Badge';
-import { Bot, Send, Save, Link2, Info } from 'lucide-react';
+import { Bot, Send, Save, Link2, Info, RefreshCw } from 'lucide-react';
 
 const TONES = ['Professional', 'Friendly', 'Grateful', 'Apologetic', 'Concise'];
 
@@ -31,7 +31,30 @@ export function GoogleReviewsPage() {
   const canSync = statusData?.canSync && statusData?.hasPlaceId;
   const canPostReplies = statusData?.canPostReplies === true;
 
-  // Load reviews if sync is available or if there might be existing reviews
+  // Auto-sync reviews on page load when sync is available
+  const syncMutation = useMutation({
+    mutationFn: () => googleApi.syncReviews(businessId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['google-reviews', businessId] });
+    },
+  });
+
+  // Trigger auto-sync once when status is loaded and sync is available
+  useQuery({
+    queryKey: ['google-auto-sync', businessId],
+    queryFn: async () => {
+      if (canSync) {
+        await googleApi.syncReviews(businessId);
+        queryClient.invalidateQueries({ queryKey: ['google-reviews', businessId] });
+      }
+      return true;
+    },
+    enabled: !!businessId && canSync === true,
+    staleTime: 5 * 60 * 1000, // Don't re-sync within 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Load reviews
   const { data, isLoading } = useQuery({
     queryKey: ['google-reviews', businessId, page],
     queryFn: () => googleApi.getReviews(businessId, page).then(r => r.data),
@@ -90,10 +113,31 @@ export function GoogleReviewsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Google Reviews</h1>
-        <p className="text-gray-500 text-sm">Reviews synced from your Google Business Profile</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Google Reviews</h1>
+          <p className="text-gray-500 text-sm">
+            Reviews synced from your Google Business Profile — most recent first
+          </p>
+        </div>
+        {canSync && (
+          <Button
+            variant="outline"
+            size="sm"
+            isLoading={syncMutation.isPending}
+            onClick={() => syncMutation.mutate()}
+          >
+            <RefreshCw size={16} className="mr-1.5" /> Sync Reviews
+          </Button>
+        )}
       </div>
+
+      {syncMutation.isSuccess && (
+        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-2">
+          Reviews synced successfully! Google Places API returns up to 5 most relevant reviews per sync.
+          Aggregate rating and total review count reflect your full Google profile.
+        </div>
+      )}
 
       {isLoading ? (
         <div className="text-center py-10">

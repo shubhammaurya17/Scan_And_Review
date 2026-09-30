@@ -74,15 +74,21 @@ export function AnalyticsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
           <p className="text-gray-500 text-sm">Feedback and conversion insights</p>
         </div>
-        <div className="flex gap-2">
-          {['today', '7d', '30d'].map(p => (
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { key: 'today', label: 'Today' },
+            { key: '7d', label: '1 Week' },
+            { key: '30d', label: '1 Month' },
+            { key: '3m', label: '3 Months' },
+            { key: '6m', label: '6 Months' },
+          ].map(p => (
             <Button
-              key={p}
-              variant={period === p ? 'primary' : 'outline'}
+              key={p.key}
+              variant={period === p.key ? 'primary' : 'outline'}
               size="sm"
-              onClick={() => setPeriod(p)}
+              onClick={() => setPeriod(p.key)}
             >
-              {p === 'today' ? 'Today' : p === '7d' ? '7 Days' : '30 Days'}
+              {p.label}
             </Button>
           ))}
         </div>

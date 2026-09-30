@@ -74,53 +74,6 @@ export function OverviewPage() {
         ))}
       </div>
 
-      {/* Sentiment */}
-      {feedback && (feedback.sentiment?.total || 0) > 0 && (
-        <Card>
-          <CardContent>
-            <h3 className="font-semibold mb-3">Sentiment Breakdown</h3>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-green-600">Positive</span>
-                  <span>{feedback.sentiment?.positive || 0}</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500 rounded-full"
-                    style={{ width: `${feedback.sentiment?.total > 0 ? ((feedback.sentiment?.positive || 0) / feedback.sentiment.total * 100) : 0}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Neutral</span>
-                  <span>{feedback.sentiment?.neutral || 0}</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gray-400 rounded-full"
-                    style={{ width: `${feedback.sentiment?.total > 0 ? ((feedback.sentiment?.neutral || 0) / feedback.sentiment.total * 100) : 0}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-red-600">Negative</span>
-                  <span>{feedback.sentiment?.negative || 0}</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-500 rounded-full"
-                    style={{ width: `${feedback.sentiment?.total > 0 ? ((feedback.sentiment?.negative || 0) / feedback.sentiment.total * 100) : 0}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Funnel */}
       {funnel && (
         <Card>

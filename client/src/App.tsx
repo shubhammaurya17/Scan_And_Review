@@ -5,7 +5,7 @@ import { SignupPage } from './pages/auth/SignupPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { OverviewPage } from './pages/dashboard/OverviewPage';
-import { FeedbackInboxPage } from './pages/dashboard/FeedbackInboxPage';
+
 import { QuestionBuilderPage } from './pages/dashboard/QuestionBuilderPage';
 import { QRStudioPage } from './pages/dashboard/QRStudioPage';
 import { AnalyticsPage } from './pages/dashboard/AnalyticsPage';
@@ -14,7 +14,7 @@ import { LandingPage } from './pages/LandingPage';
 import AlertsPage from './pages/dashboard/AlertsPage';
 import GoogleConnectionPage from './pages/dashboard/GoogleConnectionPage';
 import GoogleReviewsPage from './pages/dashboard/GoogleReviewsPage';
-import AIRepliesPage from './pages/dashboard/AIRepliesPage';
+
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import BusinessManagementPage from './pages/admin/BusinessManagementPage';
@@ -39,13 +39,11 @@ export default function App() {
         </ProtectedRoute>
       }>
         <Route index element={<OverviewPage />} />
-        <Route path="feedback" element={<FeedbackInboxPage />} />
         <Route path="questions" element={<QuestionBuilderPage />} />
         <Route path="qr-studio" element={<QRStudioPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="google-reviews" element={<GoogleReviewsPage />} />
-        <Route path="ai-replies" element={<AIRepliesPage />} />
         <Route path="alerts" element={<AlertsPage />} />
         <Route path="google-connection" element={<GoogleConnectionPage />} />
       </Route>

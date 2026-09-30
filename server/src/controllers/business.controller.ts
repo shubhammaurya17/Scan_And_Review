@@ -134,12 +134,14 @@ export class BusinessController {
       const startDate = new Date();
       if (period === '7d') startDate.setDate(endDate.getDate() - 7);
       else if (period === 'today') startDate.setHours(0, 0, 0, 0);
+      else if (period === '3m') startDate.setMonth(endDate.getMonth() - 3);
+      else if (period === '6m') startDate.setMonth(endDate.getMonth() - 6);
       else startDate.setDate(endDate.getDate() - 30);
 
       const [funnel, feedback, googleReviewTrend] = await Promise.all([
         analyticsService.getFunnelMetrics(businessId, startDate, endDate),
         analyticsService.getFeedbackStats(businessId, startDate, endDate),
-        analyticsService.getGoogleReviewTrend(businessId),
+        analyticsService.getGoogleReviewTrend(businessId, startDate, endDate),
       ]);
 
       res.json({ success: true, data: { funnel, feedback, googleReviewTrend } });

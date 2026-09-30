@@ -90,10 +90,20 @@ export class AnalyticsService {
     const googleAggregateRating = googleConnection?.googleRating ?? null;
     const googleTotalCount = googleConnection?.googleReviewCount ?? 0;
 
-    // Also load synced reviews for sentiment breakdown (only available for the 5 synced reviews)
+    // Also load synced reviews for rating distribution and sentiment (only available for synced reviews)
     const googleReviews = await prisma.googleReview.findMany({
-      where: { businessId },
+      where: {
+        businessId,
+        publishedAt: { gte: startDate, lte: endDate },
+      },
     });
+
+    // Include synced Google reviews in rating distribution
+    for (const review of googleReviews) {
+      if (review.rating >= 1 && review.rating <= 5) {
+        ratingDistribution[review.rating - 1]++;
+      }
+    }
 
     // Weighted average: combine app feedback ratings with Google's aggregate rating
     let combinedRatingTotal = totalRating; // sum of app feedback averages
@@ -115,6 +125,7 @@ export class AnalyticsService {
 
     const googleReviewCount = googleTotalCount || googleReviews.length;
     const totalFeedback = appFeedbackCount + googleReviewCount;
+    const totalDistributionCount = ratingDistribution.reduce((s, c) => s + c, 0);
     const avgRating = combinedRatingCount > 0 ? combinedRatingTotal / combinedRatingCount : 0;
 
     // Sentiment: only from reviews we have actual rating data for (app sessions + synced Google reviews)
@@ -147,7 +158,7 @@ export class AnalyticsService {
       ratingDistribution: ratingDistribution.map((count, i) => ({
         rating: i + 1,
         count,
-        percentage: totalFeedback > 0 ? Math.round((count / totalFeedback) * 100) : 0,
+        percentage: totalDistributionCount > 0 ? Math.round((count / totalDistributionCount) * 100) : 0,
       })),
       sentiment: {
         positive,
@@ -218,9 +229,14 @@ export class AnalyticsService {
     };
   }
 
-  async getGoogleReviewTrend(businessId: string) {
+  async getGoogleReviewTrend(businessId: string, startDate?: Date, endDate?: Date) {
+    const where: any = { businessId };
+    if (startDate && endDate) {
+      where.publishedAt = { gte: startDate, lte: endDate };
+    }
+
     const reviews = await prisma.googleReview.findMany({
-      where: { businessId },
+      where,
       orderBy: { publishedAt: 'asc' },
     });
 

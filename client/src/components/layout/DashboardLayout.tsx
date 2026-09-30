@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { alertApi } from '../../services/alertApi';
 import {
-  LayoutDashboard, MessageSquare, Star, Bot, BarChart3,
+  LayoutDashboard, Star, BarChart3,
   Bell, HelpCircle, QrCode, Link2, Settings, LogOut, Menu, X, Shield
 } from 'lucide-react';
 import { useState } from 'react';
@@ -11,9 +11,7 @@ import { cn } from '../../lib/utils';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Overview', end: true },
-  { to: '/dashboard/feedback', icon: MessageSquare, label: 'Feedback Inbox' },
   { to: '/dashboard/google-reviews', icon: Star, label: 'Google Reviews' },
-  { to: '/dashboard/ai-replies', icon: Bot, label: 'AI Replies' },
   { to: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/dashboard/alerts', icon: Bell, label: 'Alerts' },
   { to: '/dashboard/questions', icon: HelpCircle, label: 'Questions' },

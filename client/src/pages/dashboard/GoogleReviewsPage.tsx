@@ -134,10 +134,7 @@ export function GoogleReviewsPage() {
 
       {syncMutation.isSuccess && (
         <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-2">
-          ✅ Reviews synced successfully!
-          {syncMutation.data?.data?.data?.source === 'business_profile_api'
-            ? ` Fetched ${syncMutation.data?.data?.data?.reviewCount || ''} reviews via Google Business Profile API.`
-            : ' Google Places API returns up to 5 most relevant reviews. Connect Google OAuth for all reviews.'}
+          ✅ {syncMutation.data?.data?.data?.note || 'Reviews synced successfully! Sync regularly to accumulate more reviews.'}
         </div>
       )}
 

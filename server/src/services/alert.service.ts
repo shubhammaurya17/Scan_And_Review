@@ -8,7 +8,9 @@ export class AlertService {
     });
     if (!session || session.responses.length === 0) return;
 
-    const avgRating = session.responses.reduce((sum, r) => sum + r.rating, 0) / session.responses.length;
+    const ratedResponses = session.responses.filter(r => r.rating != null);
+    if (ratedResponses.length === 0) return;
+    const avgRating = ratedResponses.reduce((sum, r) => sum + r.rating!, 0) / ratedResponses.length;
 
     // Alert: Low rating (1-2 stars average)
     if (avgRating <= 2) {
@@ -176,8 +178,9 @@ export class AlertService {
       // Calculate combined averages
       let recentTotal = 0, recentRatingCount = 0;
       for (const s of recentSessions) {
-        if (s.responses.length > 0) {
-          recentTotal += s.responses.reduce((sum: number, r: any) => sum + r.rating, 0) / s.responses.length;
+        const rated = s.responses.filter((r: any) => r.rating != null);
+        if (rated.length > 0) {
+          recentTotal += rated.reduce((sum: number, r: any) => sum + r.rating, 0) / rated.length;
           recentRatingCount++;
         }
       }
@@ -188,8 +191,9 @@ export class AlertService {
 
       let prevTotal = 0, prevRatingCount = 0;
       for (const s of previousSessions) {
-        if (s.responses.length > 0) {
-          prevTotal += s.responses.reduce((sum: number, r: any) => sum + r.rating, 0) / s.responses.length;
+        const rated = s.responses.filter((r: any) => r.rating != null);
+        if (rated.length > 0) {
+          prevTotal += rated.reduce((sum: number, r: any) => sum + r.rating, 0) / rated.length;
           prevRatingCount++;
         }
       }

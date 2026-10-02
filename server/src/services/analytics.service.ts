@@ -73,7 +73,9 @@ export class AnalyticsService {
 
     for (const session of sessions) {
       if (session.responses.length > 0) {
-        const avg = session.responses.reduce((s, r) => s + r.rating, 0) / session.responses.length;
+        const rated = session.responses.filter(r => r.rating != null);
+        if (rated.length === 0) continue;
+        const avg = rated.reduce((s, r) => s + r.rating!, 0) / rated.length;
         totalRating += avg;
         ratingCount++;
         const rounded = Math.round(avg);
@@ -133,7 +135,7 @@ export class AnalyticsService {
 
     for (const session of sessions) {
       const avg = session.responses.length > 0
-        ? session.responses.reduce((sum, r) => sum + r.rating, 0) / session.responses.length
+        ? (() => { const rated = session.responses.filter(r => r.rating != null); return rated.length > 0 ? rated.reduce((sum, r) => sum + r.rating!, 0) / rated.length : 0; })()
         : 0;
       if (avg > 0) {
         sentimentTotal++;
@@ -194,7 +196,7 @@ export class AnalyticsService {
     const data = sessions
       .map(session => {
         const avgRating = session.responses.length > 0
-          ? session.responses.reduce((s, r) => s + r.rating, 0) / session.responses.length
+          ? (() => { const rated = session.responses.filter(r => r.rating != null); return rated.length > 0 ? rated.reduce((s, r) => s + r.rating!, 0) / rated.length : 0; })()
           : 0;
 
         if (ratingFilter && Math.round(avgRating) !== ratingFilter) return null;
@@ -276,7 +278,9 @@ export class AnalyticsService {
       }
       dailyData[date].feedbackCount++;
       if (session.responses.length > 0) {
-        const avg = session.responses.reduce((s, r) => s + r.rating, 0) / session.responses.length;
+        const rated = session.responses.filter(r => r.rating != null);
+        if (rated.length === 0) continue;
+        const avg = rated.reduce((s, r) => s + r.rating!, 0) / rated.length;
         dailyData[date].totalRating += avg;
         dailyData[date].count++;
       }

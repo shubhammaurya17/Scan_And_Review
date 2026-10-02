@@ -52,45 +52,55 @@ export class GeminiService implements IAIService {
       : input.averageRating >= 3 ? 'mixed'
       : 'mostly negative';
 
-    // Generate all 3 styles in a single API call for efficiency
-    const prompt = `You are helping a real customer write a Google review for "${input.businessName}" (a ${input.categoryName} business).
+    // Add randomness so Gemini generates completely different results every time
+    const randomSeed = Math.random().toString(36).substring(2, 10);
+    const timestamp = Date.now();
+    const randomAngle = ['what surprised them', 'what they noticed first', 'how it compared to expectations', 'the overall vibe', 'the one thing they keep thinking about'][Math.floor(Math.random() * 5)];
+    const randomOpener = ['Start with a feeling or reaction', 'Start with what happened', 'Start with a verdict', 'Start mid-thought', 'Start with a contrast'][Math.floor(Math.random() * 5)];
 
-Here's how the customer rated their visit:
+    // Generate all 3 styles in a single API call for efficiency
+    const prompt = `You are ghostwriting a Google review on behalf of a real customer who just visited "${input.businessName}" (a ${input.categoryName} business).
+
+Their ratings:
 ${ratingsText}
 
-Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
-${input.comment ? `\nCustomer's personal note: "${input.comment}"` : ''}
+Overall impression: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
+${input.comment ? `Customer said in their own words: "${input.comment}"` : ''}
 
-Write exactly 3 different review drafts in these styles. Each draft MUST feel genuinely different — not just rephrased versions of each other. Vary the structure, opening, focus points, and word choices.
+Write 3 review drafts. Each one should read like it was typed by a real person — imperfect, personal, and honest. Think about how actual people write Google reviews: sometimes they ramble a bit, sometimes they're blunt, sometimes they mention one thing that stuck with them.
 
-STYLE 1 — Balanced & Authentic (3-4 sentences):
-A polished, well-rounded review. Sound like someone who thinks before writing but keeps it real. Highlight the most notable aspects of the visit. Use natural, confident language.
+DRAFT 1 — Thoughtful (3-4 sentences):
+Write like someone who took a moment to reflect. Natural flow, not a list. Mention what stood out (good or bad). Don't try to cover everything.
 
-STYLE 2 — Warm & Natural (2-3 sentences):
-A casual, conversational review like you're texting a friend about the place. Use contractions, simple words, genuine emotion. Show personality.
+DRAFT 2 — Casual (2-3 sentences):
+Write like someone tapping out a quick review on their phone. Relaxed grammar is fine. Show genuine feeling — excitement, disappointment, surprise, whatever fits the ratings.
 
-STYLE 3 — Short & Direct (1-2 sentences max):
-A punchy, no-nonsense review. Get to the point immediately. What mattered most? Say it plainly.
+DRAFT 3 — Minimal (1-2 sentences):
+Write like someone who rarely leaves reviews but felt compelled to this time. Just the core takeaway.
 
-CRITICAL RULES:
-- Write each in first person as the customer
-- ONLY reference things from the ratings and comments — NEVER invent specific details like staff names, dish names, prices, or events
-- Match the tone to the actual ratings — don't sugarcoat low scores or over-hype average ones
-- Each draft must use a DIFFERENT opening (never start two drafts the same way)
-- Sound like real Google reviews, not AI-generated marketing copy
-- Do NOT use phrases like "I had the pleasure", "I highly recommend", "exceeded expectations"
-- VARY sentence length and rhythm between drafts
+HARD RULES:
+- First person only
+- NEVER invent specifics not in the ratings (no staff names, no menu items, no prices)
+- Match the sentiment to the actual scores — a 2/5 is not "pretty decent"
+- NO review clichés: avoid "exceeded expectations", "hidden gem", "I had the pleasure", "highly recommend", "will definitely be back", "top-notch"
+- Each draft must start differently — vary the first word and sentence structure
+- Keep it grounded: real reviews are specific about what was good/bad, not generic praise
+- Vary sentence length within each draft — mix short and longer sentences
+- IMPORTANT: Every generation must be completely unique. Never repeat phrasing from previous outputs.
+- Focus angle for this generation: ${randomAngle}
+- Opening style: ${randomOpener}
+- Uniqueness seed: ${randomSeed}-${timestamp}
 
-Respond in this EXACT format with no other text:
+Format your response EXACTLY like this (no extra text):
 ---STYLE1---
-[review text]
+[draft text]
 ---STYLE2---
-[review text]
+[draft text]
 ---STYLE3---
-[review text]`;
+[draft text]`;
 
     try {
-      const content = await this.generate(prompt, 1.0, 600);
+      const content = await this.generate(prompt, 1.1, 700);
       return this.parseDrafts(content);
     } catch (err) {
       console.error('Gemini draft generation failed, trying individual calls:', err);
@@ -135,18 +145,21 @@ Respond in this EXACT format with no other text:
     ratingsText: string,
     overallSentiment: string
   ): Promise<GeneratedDraft[]> {
+    const randomSeed = Math.random().toString(36).substring(2, 10);
+    const timestamp = Date.now();
+    const angles = ['what surprised you', 'what you noticed first', 'how it compared to expectations', 'the overall vibe', 'the one thing you keep thinking about'];
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a polished, genuine Google review in 3-4 sentences. Sound like a real person who visited — be specific about what was good or bad based on the ratings. Use natural, confident language. Avoid generic filler.`,
+        instruction: `Write a thoughtful Google review in 3-4 sentences. Sound like someone reflecting on their visit — not listing pros and cons, just sharing what stuck with them. Be honest about what was good and what wasn't. Avoid review clichés. Focus on: ${angles[Math.floor(Math.random() * angles.length)]}.`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a casual, upbeat Google review in 2-3 sentences. Sound like you're telling a friend about the place. Use contractions, simple words, genuine emotion.`,
+        instruction: `Write a casual Google review in 2-3 sentences, like you're typing it on your phone right after leaving. Relaxed tone, real emotion, maybe a bit unpolished. Show personality — be enthusiastic, disappointed, or surprised based on the ratings. Focus on: ${angles[Math.floor(Math.random() * angles.length)]}.`,
       },
       {
         style: 'CONCISE' as const,
-        instruction: `Write a brief, punchy Google review in 1-2 sentences max. Get straight to the point — what was good, what wasn't. No fluff.`,
+        instruction: `Write a Google review in 1-2 sentences max. You rarely leave reviews — say only what compelled you to write this one. Be blunt and direct. Focus on: ${angles[Math.floor(Math.random() * angles.length)]}.`,
       },
     ];
 
@@ -154,24 +167,26 @@ Respond in this EXACT format with no other text:
       styles.map(async ({ style, instruction }) => {
         const prompt = `You are a real customer writing a Google review for "${input.businessName}" (${input.categoryName}).
 
-Here's how you rated your visit:
+Your ratings:
 ${ratingsText}
 
 Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
-${input.comment ? `\nYour personal note: "${input.comment}"` : ''}
+${input.comment ? `You noted: "${input.comment}"` : ''}
 
 ${instruction}
 
 RULES:
-- Write in first person as the customer
-- ONLY reference things the ratings cover — never invent details
-- Match tone to ratings — don't sugarcoat low ratings
-- Sound like a real Google review, not AI
-- Do NOT start with the business name
-- Output ONLY the review text`;
+- First person, as the customer
+- ONLY mention things from the ratings — never make up details
+- Match tone to the actual scores
+- NO clichés like "hidden gem", "exceeded expectations", "highly recommend", "will definitely be back"
+- IMPORTANT: Every generation must produce completely unique text. Never repeat prior phrasing.
+- Don't start with the business name
+- Output ONLY the review text, nothing else
+- Uniqueness seed: ${randomSeed}-${timestamp}`;
 
         try {
-          const content = await this.generate(prompt, 1.0, 250);
+          const content = await this.generate(prompt, 1.2, 250);
           let cleaned = content.trim();
           cleaned = cleaned.replace(/^["']|["']$/g, '');
           cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
@@ -188,28 +203,31 @@ RULES:
 
   async generateReply(review: string, businessName: string, tone: string): Promise<string> {
     const toneInstructions: Record<string, string> = {
-      PROFESSIONAL: 'Use a professional, courteous tone.',
-      FRIENDLY: 'Use a warm, friendly tone.',
-      GRATEFUL: 'Express gratitude sincerely.',
-      APOLOGETIC: 'Acknowledge concerns and apologize sincerely.',
-      CONCISE: 'Be brief and to the point.',
+      PROFESSIONAL: 'Keep it professional but warm — like a real business owner who cares, not a corporate PR template.',
+      FRIENDLY: 'Be genuinely friendly and personal — like the owner actually remembers this customer.',
+      GRATEFUL: 'Express real gratitude — be specific about what you appreciate, not just "thanks for the kind words".',
+      APOLOGETIC: 'Acknowledge what went wrong honestly. Don\'t be defensive or make excuses. Show you take it seriously.',
+      CONCISE: 'Keep it short — 2-3 sentences max. Address the key point and move on.',
     };
 
-    const prompt = `You are the owner of "${businessName}" replying to a Google review.
+    const prompt = `You are the owner of "${businessName}" writing a reply to this Google review:
 
-The review: "${review}"
+"${review}"
 
-Write a reply. ${toneInstructions[tone] || toneInstructions.PROFESSIONAL}
+${toneInstructions[tone] || toneInstructions.PROFESSIONAL}
 
-RULES:
-- Address specific points the reviewer mentioned
-- Do NOT make promises you cannot verify
-- Keep it under 150 words
-- Be authentic
+Write a reply that sounds like a real person — not a chatbot or a marketing team. Address what the reviewer actually said. Keep it under 100 words.
 
-Write only the reply text:`;
+AVOID these patterns that scream "AI-generated":
+- Starting with "Thank you for your [adjective] review/feedback"
+- "We're thrilled/delighted to hear..."
+- "Your feedback is invaluable"
+- "We strive to..."
+- Ending with "We look forward to welcoming you back"
 
-    const content = await this.generate(prompt, 0.7, 200);
+Write only the reply:`;
+
+    const content = await this.generate(prompt, 0.8, 200);
     return content.trim();
   }
 

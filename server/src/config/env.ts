@@ -12,7 +12,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   JWT_SECRET: z.string().min(10).default('reputeai-dev-jwt-secret-change-in-production'),
   JWT_REFRESH_SECRET: z.string().min(10).default('reputeai-dev-refresh-secret-change-in-production'),
-  AI_PROVIDER: z.string().default('ollama'),
+  AI_PROVIDER: z.string().default('gemini'),
   AI_MODEL: z.string().default('openai/gpt-oss-20b'),
   AI_BASE_URL: z.string().default('http://localhost:11434'),
   GROQ_API_KEY: z.string().optional(),

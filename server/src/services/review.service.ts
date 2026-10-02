@@ -1,5 +1,5 @@
 import { prisma } from '../config/database';
-import { getAIService } from './ai-factory';
+import { getAIServiceAsync } from './ai-factory';
 import { TemplateService } from './template.service';
 import { AppError } from '../utils/AppError';
 import { v4 as uuidv4 } from 'uuid';
@@ -179,24 +179,35 @@ export class ReviewService {
     };
 
     let drafts: { style: string; content: string }[] = [];
-    const aiService = getAIService();
+    const aiService = await getAIServiceAsync();
+    const serviceName = aiService.constructor.name;
+    console.log(`📝 Generating drafts using: ${serviceName}`);
 
     try {
       drafts = await aiService.generateReviewDrafts(draftInput);
       // Filter out any drafts with empty content
       drafts = drafts.filter(d => d.content && d.content.trim().length > 0);
+      console.log(`✅ ${serviceName} returned ${drafts.length} valid drafts`);
     } catch (err) {
-      console.error('AI service threw during draft generation:', err);
+      console.error(`❌ ${serviceName} threw during draft generation:`, err);
       // drafts stays [] — will trigger template fallback below
     }
 
-    // If AI service returned fewer than 3 valid drafts, fall back to templates entirely
-    if (drafts.length < 3) {
-      if (drafts.length > 0) {
-        console.warn(`AI service returned only ${drafts.length} valid drafts — falling back to template generation`);
-      } else {
-        console.warn('AI service returned 0 drafts — falling back to template generation');
+    // If AI returned some but fewer than 3, supplement with templates instead of discarding AI drafts
+    if (drafts.length > 0 && drafts.length < 3) {
+      console.warn(`${serviceName} returned only ${drafts.length} drafts — supplementing with templates`);
+      const templateService = new TemplateService();
+      const templateDrafts = await templateService.generateReviewDrafts(draftInput);
+      const existingStyles = new Set(drafts.map(d => d.style));
+      for (const td of templateDrafts) {
+        if (!existingStyles.has(td.style) && drafts.length < 3) {
+          drafts.push(td);
+          existingStyles.add(td.style);
+        }
       }
+    } else if (drafts.length === 0) {
+      // Only use full template fallback when AI returned nothing at all
+      console.warn('AI service returned 0 drafts — falling back to template generation');
       const templateService = new TemplateService();
       drafts = await templateService.generateReviewDrafts(draftInput);
     }

@@ -157,8 +157,8 @@ export class GoogleReviewsService {
     const review = await prisma.googleReview.findUnique({ where: { id: reviewId } });
     if (!review) throw new AppError('Review not found', 404);
 
-    const { getAIService } = await import('./ai-factory');
-    const aiService = getAIService();
+    const { getAIServiceAsync } = await import('./ai-factory');
+    const aiService = await getAIServiceAsync();
     const content = await aiService.generateReply(
       review.comment || `${review.rating} star review by ${review.authorName}`,
       businessName,

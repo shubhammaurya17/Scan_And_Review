@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { googleService } from '../services/google.service';
 import { googleReviewsService } from '../services/google-reviews.service';
-import { getAIService } from '../services/ai-factory';
+import { getAIServiceAsync } from '../services/ai-factory';
 import { prisma } from '../config/database';
 
 export class GoogleController {
@@ -105,7 +105,7 @@ export class GoogleController {
       const business = await prisma.business.findUnique({ where: { id: req.params.businessId } });
       if (!business) return res.status(404).json({ success: false, error: 'Business not found' });
 
-      const aiService = getAIService();
+      const aiService = await getAIServiceAsync();
       const reply = await aiService.generateReply(reviewText, business.name, tone || 'PROFESSIONAL');
       res.json({ success: true, data: { reply } });
     } catch (err) {

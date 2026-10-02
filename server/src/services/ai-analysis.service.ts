@@ -1,5 +1,5 @@
 import { prisma } from '../config/database';
-import { getAIService } from './ai-factory';
+import { getAIServiceAsync } from './ai-factory';
 
 export class AIAnalysisService {
   async analyzeFeedbackBatch(businessId: string, startDate: Date, endDate: Date) {
@@ -12,7 +12,7 @@ export class AIAnalysisService {
       include: { responses: { include: { question: true } }, feedback: true },
     });
 
-    const aiService = getAIService();
+    const aiService = await getAIServiceAsync();
     const comments = sessions
       .filter(s => s.feedback?.comment)
       .map(s => s.feedback!.comment!);

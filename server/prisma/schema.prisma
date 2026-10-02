@@ -45,6 +45,7 @@ model Business {
   qrConfig        QRConfiguration?
   alerts          ReputationAlert[]
   aiAnalyses      AIAnalysis[]
+  insights        BusinessInsight[]
 }
 
 model BusinessMember {
@@ -66,6 +67,7 @@ model Category {
   createdAt         DateTime           @default(now())
   businesses        Business[]
   questionTemplates QuestionTemplate[]
+  insightTemplates  InsightTemplate[]
 }
 
 model QuestionTemplate {
@@ -108,6 +110,7 @@ model ReviewSession {
   responses    CustomerResponse[]
   feedback     CustomerFeedback?
   drafts       ReviewDraft[]
+  selectedInsights SelectedInsight[]
 }
 
 model CustomerResponse {
@@ -121,6 +124,41 @@ model CustomerResponse {
   question   BusinessQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, questionId])
+}
+
+model InsightTemplate {
+  id         String   @id @default(cuid())
+  categoryId String
+  label      String
+  slug       String
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+model BusinessInsight {
+  id         String            @id @default(cuid())
+  businessId String
+  label      String
+  slug       String
+  sortOrder  Int               @default(0)
+  isActive   Boolean           @default(true)
+  isCustom   Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+  business   Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  selections SelectedInsight[]
+}
+
+model SelectedInsight {
+  id        String          @id @default(cuid())
+  sessionId String
+  insightId String
+  createdAt DateTime        @default(now())
+  session   ReviewSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  insight   BusinessInsight @relation(fields: [insightId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, insightId])
 }
 
 model CustomerFeedback {

@@ -2,15 +2,12 @@ import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import * as reviewApi from '../../services/reviewApi';
 import { RatingPage } from './steps/RatingPage';
-import InsightsPage from './steps/InsightsPage';
-import { CommentPage } from './steps/CommentPage';
 import { GeneratingPage } from './steps/GeneratingPage';
 import { DraftsPage } from './steps/DraftsPage';
-import { HandoffPage } from './steps/HandoffPage';
 import { ThankYouPage } from './steps/ThankYouPage';
 import { RefreshCw } from 'lucide-react';
 
-type Step = 'loading' | 'rating' | 'insights' | 'comment' | 'generating' | 'drafts' | 'handoff' | 'done' | 'error';
+type Step = 'loading' | 'rating' | 'generating' | 'drafts' | 'done' | 'error';
 
 const GENERATION_TIMEOUT_MS = 45000; // 45 seconds max for draft generation
 
@@ -234,24 +231,16 @@ export function ReviewFlow() {
         editedText,
       });
     } catch {
-      // Non-blocking
+      // Non-blocking — selection is recorded best-effort
     }
 
-    dispatch({ type: 'SET_STEP', payload: 'handoff' });
-  };
-
-  const handleHandoff = async () => {
-    if (!businessSlug || !state.sessionToken) return;
+    // Also record handoff (the DraftsPage handles copy + Google redirect inline)
     try {
       await reviewApi.recordHandoff(businessSlug, state.sessionToken);
     } catch {
       // Non-blocking
     }
-    dispatch({ type: 'SET_STEP', payload: 'done' });
   };
-
-  const selectedDraft = state.drafts.find((d: any) => d.id === state.selectedDraftId);
-  const reviewText = state.editedText || selectedDraft?.content || '';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
@@ -284,28 +273,12 @@ export function ReviewFlow() {
             business={state.business}
             questions={state.questions}
             responses={state.responses}
-            onSetResponse={handleSetResponse}
-            onSubmit={() => dispatch({ type: 'SET_STEP', payload: state.insights.length > 0 ? 'insights' : 'comment' })}
-            isLoading={state.isLoading}
-          />
-        )}
-
-        {state.step === 'insights' && (
-          <InsightsPage
             insights={state.insights}
             selectedInsights={state.selectedInsights}
-            onToggle={(id) => dispatch({ type: 'TOGGLE_INSIGHT', payload: id })}
-            onContinue={() => dispatch({ type: 'SET_STEP', payload: 'comment' })}
-            onSkip={() => dispatch({ type: 'SET_STEP', payload: 'comment' })}
-          />
-        )}
-
-        {state.step === 'comment' && (
-          <CommentPage
-            comment={state.comment}
-            onSetComment={(c) => dispatch({ type: 'SET_COMMENT', payload: c })}
+            onSetResponse={handleSetResponse}
+            onToggleInsight={(id) => dispatch({ type: 'TOGGLE_INSIGHT', payload: id })}
             onSubmit={handleSubmitFeedback}
-            onSkip={handleSubmitFeedback}
+            isLoading={state.isLoading}
           />
         )}
 
@@ -314,16 +287,9 @@ export function ReviewFlow() {
         {state.step === 'drafts' && (
           <DraftsPage
             drafts={state.drafts}
+            googleReviewUrl={state.googleReviewUrl}
             onSelectDraft={handleSelectDraft}
             onRetry={handleRetryDrafts}
-          />
-        )}
-
-        {state.step === 'handoff' && (
-          <HandoffPage
-            reviewText={reviewText}
-            googleReviewUrl={state.googleReviewUrl || ''}
-            onHandoff={handleHandoff}
           />
         )}
 

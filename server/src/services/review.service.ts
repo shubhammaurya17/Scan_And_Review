@@ -31,14 +31,31 @@ export class ReviewService {
       select: { id: true, label: true },
     });
 
-    // Fall back to category templates if no business-specific insights exist
+    // Fall back to category templates — auto-clone into BusinessInsight (lazy cloning)
     if (insights.length === 0 && business.categoryId) {
       const templates = await prisma.insightTemplate.findMany({
         where: { categoryId: business.categoryId, isActive: true },
         orderBy: { sortOrder: 'asc' },
-        select: { id: true, label: true },
       });
-      insights = templates;
+      if (templates.length > 0) {
+        for (const tpl of templates) {
+          await prisma.businessInsight.create({
+            data: {
+              businessId: business.id,
+              label: tpl.label,
+              slug: tpl.slug,
+              sortOrder: tpl.sortOrder,
+              isCustom: false,
+            },
+          });
+        }
+        // Re-fetch the now-cloned business insights
+        insights = await prisma.businessInsight.findMany({
+          where: { businessId: business.id, isActive: true },
+          orderBy: { sortOrder: 'asc' },
+          select: { id: true, label: true },
+        });
+      }
     }
 
     return {

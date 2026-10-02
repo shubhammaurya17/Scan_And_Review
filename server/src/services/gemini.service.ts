@@ -16,7 +16,10 @@ export class GeminiService implements IAIService {
 
   constructor() {
     this.apiKey = config.GEMINI_API_KEY || '';
-    this.model = config.AI_MODEL || 'gemini-2.0-flash';
+    // Only use AI_MODEL if it's actually a Gemini model; otherwise use default
+    const configModel = config.AI_MODEL;
+    this.model = configModel && configModel.startsWith('gemini') ? configModel : 'gemini-2.0-flash';
+    console.log(`🔧 GeminiService initialized with model: ${this.model}`);
   }
 
   async isAvailable(): Promise<boolean> {

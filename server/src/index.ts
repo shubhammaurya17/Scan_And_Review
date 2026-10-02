@@ -13,12 +13,22 @@ const app = express();
 
 // Health check — registered before all middleware so it always responds
 app.get('/api/health', (_req, res) => {
+  const { isAIAvailable } = require('./services/ai-factory');
+  const { getAIService } = require('./services/ai-factory');
+  const aiService = getAIService();
   res.json({
     success: true,
     data: {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
+      ai: {
+        provider: config.AI_PROVIDER,
+        model: config.AI_MODEL,
+        service: aiService.constructor.name,
+        available: isAIAvailable(),
+        geminiKeySet: !!config.GEMINI_API_KEY,
+      },
     },
   });
 });

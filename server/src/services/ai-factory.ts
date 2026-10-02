@@ -1,6 +1,7 @@
 import { IAIService } from './ai.service';
 import { OllamaService } from './ollama.service';
 import { GroqService } from './groq.service';
+import { GeminiService } from './gemini.service';
 import { TemplateService } from './template.service';
 import { config } from '../config/env';
 
@@ -12,7 +13,34 @@ const templateService = new TemplateService();
 async function initProvider(): Promise<void> {
   const provider = config.AI_PROVIDER;
 
-  if (provider === 'groq' && config.GROQ_API_KEY) {
+  if (provider === 'gemini' && config.GEMINI_API_KEY) {
+    const geminiService = new GeminiService();
+    const available = await geminiService.isAvailable();
+
+    if (available) {
+      console.log('✅ Gemini is available — using AI-powered generation');
+      currentService = geminiService;
+      aiAvailable = true;
+    } else {
+      console.log('⚠️ Gemini is unreachable — falling back to template generation');
+      currentService = templateService;
+      aiAvailable = false;
+    }
+
+    // Re-check Gemini every 60 seconds
+    setInterval(async () => {
+      const wasAvailable = aiAvailable;
+      aiAvailable = await geminiService.isAvailable();
+
+      if (aiAvailable && !wasAvailable) {
+        console.log('✅ Gemini is available — using AI-powered generation');
+        currentService = geminiService;
+      } else if (!aiAvailable && wasAvailable) {
+        console.log('⚠️ Gemini is unavailable — falling back to template generation');
+        currentService = templateService;
+      }
+    }, 60000);
+  } else if (provider === 'groq' && config.GROQ_API_KEY) {
     const groqService = new GroqService();
     const available = await groqService.isAvailable();
 

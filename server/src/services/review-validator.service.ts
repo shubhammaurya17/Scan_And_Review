@@ -59,6 +59,16 @@ export class ReviewValidator {
       reasons.push('Contains dollar amounts not in customer input');
     }
 
+    // 5. Insight presence check
+    if (input.selectedInsights && input.selectedInsights.length > 0) {
+      const hasInsight = input.selectedInsights.some(insight =>
+        content.toLowerCase().includes(insight.toLowerCase())
+      );
+      if (!hasInsight) {
+        reasons.push('No selected insights found in review');
+      }
+    }
+
     return { passed: reasons.length === 0, reasons };
   }
 
@@ -68,7 +78,8 @@ export class ReviewValidator {
       (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length)
     );
     const hasText = input.answers.some(a => a.questionType === 'TEXT' && a.textAnswer);
-    return !hasChips && !hasText && !input.comment;
+    const hasInsights = (input.selectedInsights?.length ?? 0) > 0;
+    return !hasChips && !hasText && !hasInsights && !input.comment;
   }
 
   private extractCustomerDetails(input: ReviewDraftInput): string[] {
@@ -85,6 +96,9 @@ export class ReviewValidator {
     if (input.comment) {
       const words = input.comment.split(/\s+/).filter(w => w.length >= 4);
       details.push(...words.slice(0, 5));
+    }
+    if (input.selectedInsights) {
+      details.push(...input.selectedInsights);
     }
     return details;
   }

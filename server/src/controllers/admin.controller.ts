@@ -137,6 +137,23 @@ export class AdminController {
               },
             });
           }
+
+          // Clone insight templates for category
+          const insightTemplates = await tx.insightTemplate.findMany({
+            where: { categoryId, isActive: true },
+            orderBy: { sortOrder: 'asc' },
+          });
+          for (const it of insightTemplates) {
+            await tx.businessInsight.create({
+              data: {
+                businessId: business.id,
+                label: it.label,
+                slug: it.slug,
+                sortOrder: it.sortOrder,
+                isCustom: false,
+              },
+            });
+          }
         }
 
         return business;
@@ -282,6 +299,53 @@ export class AdminController {
         prisma.category.count(),
       ]);
       res.json({ success: true, data: { businessCount, userCount, sessionCount, categoryCount } });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // Insight Templates
+  async getInsightTemplates(req: Request, res: Response, next: NextFunction) {
+    try {
+      const templates = await prisma.insightTemplate.findMany({
+        where: { categoryId: req.params.categoryId },
+        orderBy: { sortOrder: 'asc' },
+      });
+      res.json({ success: true, data: templates });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createInsightTemplate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { label } = req.body;
+      const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const template = await prisma.insightTemplate.create({
+        data: { ...req.body, slug, categoryId: req.params.categoryId },
+      });
+      res.status(201).json({ success: true, data: template });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateInsightTemplate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const template = await prisma.insightTemplate.update({
+        where: { id: req.params.templateId },
+        data: req.body,
+      });
+      res.json({ success: true, data: template });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteInsightTemplate(req: Request, res: Response, next: NextFunction) {
+    try {
+      await prisma.insightTemplate.delete({ where: { id: req.params.templateId } });
+      res.json({ success: true, data: { message: 'Insight template deleted' } });
     } catch (err) {
       next(err);
     }

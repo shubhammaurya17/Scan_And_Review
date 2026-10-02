@@ -229,6 +229,116 @@ export class BusinessController {
       next(err);
     }
   }
+
+  // Insight chips CRUD
+  async getInsights(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { businessId } = req.params;
+      let insights = await prisma.businessInsight.findMany({
+        where: { businessId },
+        orderBy: { sortOrder: 'asc' },
+      });
+
+      // Fall back to category templates if no business-specific insights
+      if (insights.length === 0) {
+        const business = await prisma.business.findUnique({
+          where: { id: businessId },
+          select: { categoryId: true },
+        });
+        if (business?.categoryId) {
+          const templates = await prisma.insightTemplate.findMany({
+            where: { categoryId: business.categoryId, isActive: true },
+            orderBy: { sortOrder: 'asc' },
+          });
+          res.json({
+            success: true,
+            data: templates.map(t => ({ ...t, isDefault: true })),
+          });
+          return;
+        }
+      }
+
+      res.json({ success: true, data: insights });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createInsight(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { businessId } = req.params;
+      const { label } = req.body;
+      const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+      const maxOrder = await prisma.businessInsight.findFirst({
+        where: { businessId },
+        orderBy: { sortOrder: 'desc' },
+      });
+
+      const insight = await prisma.businessInsight.create({
+        data: {
+          businessId,
+          label,
+          slug,
+          sortOrder: maxOrder ? maxOrder.sortOrder + 1 : 0,
+          isCustom: true,
+        },
+      });
+      res.status(201).json({ success: true, data: insight });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateInsight(req: Request, res: Response, next: NextFunction) {
+    try {
+      const insight = await prisma.businessInsight.update({
+        where: { id: req.params.insightId },
+        data: req.body,
+      });
+      res.json({ success: true, data: insight });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteInsight(req: Request, res: Response, next: NextFunction) {
+    try {
+      await prisma.businessInsight.delete({
+        where: { id: req.params.insightId },
+      });
+      res.json({ success: true, data: { message: 'Insight deleted' } });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async reorderInsights(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { insightIds } = req.body;
+      await prisma.$transaction(
+        insightIds.map((id: string, index: number) =>
+          prisma.businessInsight.update({
+            where: { id },
+            data: { sortOrder: index },
+          })
+        )
+      );
+      res.json({ success: true, data: { message: 'Insights reordered' } });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async resetInsights(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { businessId } = req.params;
+      await prisma.businessInsight.deleteMany({ where: { businessId } });
+      res.json({ success: true, data: { message: 'Insights reset to category defaults' } });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const businessController = new BusinessController();

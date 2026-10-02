@@ -89,6 +89,11 @@ export class TemplateService implements IAIService {
     const businessName = input.businessName;
     const commentPart = input.comment ? ` ${input.comment}` : '';
 
+    // Use insight labels as additional topics if available
+    const insightTopics = input.selectedInsights?.slice(0, 3).map(i => i.toLowerCase()) || [];
+    const effectiveHighTopic = insightTopics.length > 0 ? insightTopics[0] : highTopic;
+    const effectiveLowTopic = insightTopics.length > 1 ? insightTopics[1] : lowTopic;
+
     // ─── Professional ─────────────────────────────
     let professional = '';
     if (avgRating >= 4) {
@@ -99,16 +104,16 @@ export class TemplateService implements IAIService {
       ]);
       if (highRating >= 4) {
         professional += ' ' + pick([
-          `The ${highTopic} really stood out — ${highRating === 5 ? 'genuinely impressive' : 'well above average'}.`,
-          `Particularly pleased with the ${highTopic} — ${highRating === 5 ? 'top-tier' : 'definitely a strong point'}.`,
-          `The ${highTopic} was ${highRating === 5 ? 'excellent, honestly one of the best I\'ve experienced' : 'really well done'}.`,
+          `The ${effectiveHighTopic} really stood out — ${highRating === 5 ? 'genuinely impressive' : 'well above average'}.`,
+          `Particularly pleased with the ${effectiveHighTopic} — ${highRating === 5 ? 'top-tier' : 'definitely a strong point'}.`,
+          `The ${effectiveHighTopic} was ${highRating === 5 ? 'excellent, honestly one of the best I\'ve experienced' : 'really well done'}.`,
         ]);
       }
       if (!sameTopic && lowRating <= 3) {
         professional += ' ' + pick([
-          `The ${lowTopic} has some room to grow, but nothing that would stop me from returning.`,
-          `Minor note: the ${lowTopic} could be a touch better.`,
-          `Only small area for improvement would be the ${lowTopic}.`,
+          `The ${effectiveLowTopic} has some room to grow, but nothing that would stop me from returning.`,
+          `Minor note: the ${effectiveLowTopic} could be a touch better.`,
+          `Only small area for improvement would be the ${effectiveLowTopic}.`,
         ]);
       }
     } else if (avgRating >= 3) {
@@ -119,14 +124,14 @@ export class TemplateService implements IAIService {
       ]);
       if (highRating >= 4) {
         professional += ' ' + pick([
-          `The ${highTopic} was a definite highlight.`,
-          `On the bright side, the ${highTopic} was solid.`,
+          `The ${effectiveHighTopic} was a definite highlight.`,
+          `On the bright side, the ${effectiveHighTopic} was solid.`,
         ]);
       }
       if (!sameTopic && lowRating <= 2) {
         professional += ' ' + pick([
-          `Unfortunately, the ${lowTopic} fell short of expectations.`,
-          `The ${lowTopic} was disappointing and needs attention.`,
+          `Unfortunately, the ${effectiveLowTopic} fell short of expectations.`,
+          `The ${effectiveLowTopic} was disappointing and needs attention.`,
         ]);
       }
       professional += ' ' + pick([
@@ -141,14 +146,14 @@ export class TemplateService implements IAIService {
       ]);
       if (lowRating <= 2) {
         professional += ' ' + pick([
-          `The ${lowTopic} was particularly lacking.`,
-          `The ${lowTopic} really let the experience down.`,
+          `The ${effectiveLowTopic} was particularly lacking.`,
+          `The ${effectiveLowTopic} really let the experience down.`,
         ]);
       }
       if (!sameTopic && highRating >= 3) {
         professional += ' ' + pick([
-          `The ${highTopic} was passable, but not enough to save the visit.`,
-          `At least the ${highTopic} was okay.`,
+          `The ${effectiveHighTopic} was passable, but not enough to save the visit.`,
+          `At least the ${effectiveHighTopic} was okay.`,
         ]);
       }
       professional += ' ' + pick([
@@ -168,14 +173,14 @@ export class TemplateService implements IAIService {
       ]);
       if (highRating >= 4) {
         friendly += ' ' + pick([
-          `Loved the ${highTopic} — ${highRating === 5 ? 'seriously top-notch!' : 'really well done.'}`,
-          `The ${highTopic} was amazing — ${highRating === 5 ? 'couldn\'t ask for better!' : 'really happy with it.'}`,
+          `Loved the ${effectiveHighTopic} — ${highRating === 5 ? 'seriously top-notch!' : 'really well done.'}`,
+          `The ${effectiveHighTopic} was amazing — ${highRating === 5 ? 'couldn\'t ask for better!' : 'really happy with it.'}`,
         ]);
       }
       if (!sameTopic && lowRating <= 3) {
         friendly += ' ' + pick([
-          `The ${lowTopic} could be a little better, but honestly it's a minor thing.`,
-          `Only tiny thing — the ${lowTopic} was just okay.`,
+          `The ${effectiveLowTopic} could be a little better, but honestly it's a minor thing.`,
+          `Only tiny thing — the ${effectiveLowTopic} was just okay.`,
         ]);
       }
       friendly += ' ' + pick([
@@ -191,14 +196,14 @@ export class TemplateService implements IAIService {
       ]);
       if (highRating >= 4) {
         friendly += ' ' + pick([
-          `The ${highTopic} was nice.`,
-          `Did enjoy the ${highTopic} at least!`,
+          `The ${effectiveHighTopic} was nice.`,
+          `Did enjoy the ${effectiveHighTopic} at least!`,
         ]);
       }
       if (!sameTopic && lowRating <= 2) {
         friendly += ' ' + pick([
-          `Wasn't too happy with the ${lowTopic} though.`,
-          `The ${lowTopic} could use some love.`,
+          `Wasn't too happy with the ${effectiveLowTopic} though.`,
+          `The ${effectiveLowTopic} could use some love.`,
         ]);
       }
       friendly += ' ' + pick([
@@ -213,8 +218,8 @@ export class TemplateService implements IAIService {
       ]);
       if (lowRating <= 2) {
         friendly += ' ' + pick([
-          `The ${lowTopic} really didn't do it for me.`,
-          `The ${lowTopic} was a real letdown.`,
+          `The ${effectiveLowTopic} really didn't do it for me.`,
+          `The ${effectiveLowTopic} was a real letdown.`,
         ]);
       }
       friendly += ' ' + pick([
@@ -235,7 +240,7 @@ export class TemplateService implements IAIService {
       if (highRating >= 4) {
         concise += ' ' + pick([
           `${highTopic.charAt(0).toUpperCase() + highTopic.slice(1)} was excellent.`,
-          `Standout ${highTopic}.`,
+          `Standout ${effectiveHighTopic}.`,
         ]);
       }
       concise += ' ' + pick([`Recommended.`, `Would go again.`, `Worth a visit.`]);
@@ -244,7 +249,7 @@ export class TemplateService implements IAIService {
         `${businessName} was decent.`,
         `${businessName} — okay, nothing special.`,
       ]);
-      if (highRating >= 4) concise += ` Good ${highTopic}.`;
+      if (highRating >= 4) concise += ` Good ${effectiveHighTopic}.`;
       if (!sameTopic && lowRating <= 2) concise += ` ${lowTopic.charAt(0).toUpperCase() + lowTopic.slice(1)} needs work.`;
     } else {
       concise = pick([

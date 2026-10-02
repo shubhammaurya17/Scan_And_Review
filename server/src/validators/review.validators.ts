@@ -13,6 +13,7 @@ export const submitFeedbackSchema = z.object({
     { message: 'Each response must have either a rating or an answer' }
   ),
   comment: z.string().max(500).optional(),
+  selectedInsights: z.array(z.string().min(1)).max(20).optional(),
 });
 
 export const generateDraftsSchema = z.object({
@@ -36,6 +37,7 @@ export const trackEventSchema = z.object({
     'QR_SCANNED', 'PAGE_LOADED', 'SESSION_STARTED',
     'RATING_STARTED', 'RATING_COMPLETED', 'COMMENT_SUBMITTED',
     'DRAFTS_GENERATED', 'DRAFT_SELECTED', 'DRAFT_EDITED', 'GOOGLE_HANDOFF',
+    'INSIGHTS_VIEWED', 'INSIGHTS_SELECTED',
   ]),
   metadata: z.record(z.unknown()).optional(),
 });

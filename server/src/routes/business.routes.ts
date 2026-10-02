@@ -4,7 +4,7 @@ import { googleController } from '../controllers/google.controller';
 import { requireAuth } from '../middleware/auth';
 import { requireBusinessAccess } from '../middleware/businessAccess';
 import { validate } from '../middleware/validate';
-import { createQuestionSchema, updateQuestionSchema, reorderQuestionsSchema, updateBusinessSchema } from '../validators/business.validators';
+import { createQuestionSchema, updateQuestionSchema, reorderQuestionsSchema, updateBusinessSchema, createInsightSchema, updateInsightSchema, reorderInsightsSchema } from '../validators/business.validators';
 import { aiLimiter } from '../middleware/rateLimit';
 
 const router = Router();
@@ -22,6 +22,14 @@ router.post('/:businessId/questions', requireAuth, requireBusinessAccess(), vali
 router.put('/:businessId/questions/:questionId', requireAuth, requireBusinessAccess(), validate(updateQuestionSchema), businessController.updateQuestion);
 router.delete('/:businessId/questions/:questionId', requireAuth, requireBusinessAccess(), businessController.deleteQuestion);
 router.put('/:businessId/questions/reorder', requireAuth, requireBusinessAccess(), validate(reorderQuestionsSchema), businessController.reorderQuestions);
+
+// Insight chips
+router.get('/:businessId/insights', requireAuth, requireBusinessAccess(), businessController.getInsights);
+router.post('/:businessId/insights', requireAuth, requireBusinessAccess(), validate(createInsightSchema), businessController.createInsight);
+router.put('/:businessId/insights/reorder', requireAuth, requireBusinessAccess(), validate(reorderInsightsSchema), businessController.reorderInsights);
+router.post('/:businessId/insights/reset', requireAuth, requireBusinessAccess(), businessController.resetInsights);
+router.put('/:businessId/insights/:insightId', requireAuth, requireBusinessAccess(), validate(updateInsightSchema), businessController.updateInsight);
+router.delete('/:businessId/insights/:insightId', requireAuth, requireBusinessAccess(), businessController.deleteInsight);
 
 // Feedback & Analytics
 router.get('/:businessId/feedback', requireAuth, requireBusinessAccess(), businessController.getFeedback);

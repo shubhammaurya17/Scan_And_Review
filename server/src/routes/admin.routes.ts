@@ -32,6 +32,12 @@ router.post('/categories/:categoryId/templates', adminController.createTemplate)
 router.put('/categories/:categoryId/templates/:templateId', adminController.updateTemplate);
 router.delete('/categories/:categoryId/templates/:templateId', adminController.deleteTemplate);
 
+// Insight templates
+router.get('/categories/:categoryId/insight-templates', adminController.getInsightTemplates);
+router.post('/categories/:categoryId/insight-templates', adminController.createInsightTemplate);
+router.put('/categories/:categoryId/insight-templates/:templateId', adminController.updateInsightTemplate);
+router.delete('/categories/:categoryId/insight-templates/:templateId', adminController.deleteInsightTemplate);
+
 // Users
 router.get('/users', adminController.listUsers);
 

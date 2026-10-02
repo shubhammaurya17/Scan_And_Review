@@ -162,4 +162,43 @@ describe('Review Quality — Template Service with Structured Input', () => {
     expect(styles).toContain('FRIENDLY');
     expect(styles).toContain('CONCISE');
   });
+
+  // ── Test Case 8: Insights enrich template drafts ──
+
+  it('generates reviews that incorporate selectedInsights', async () => {
+    const input: ReviewDraftInput = {
+      businessName: 'Balance Plus - HSR',
+      categoryName: 'Physiotherapy',
+      answers: [
+        { questionText: 'How would you rate your session?', questionType: 'STAR_RATING', rating: 5 },
+      ],
+      selectedInsights: ['Clear exercise guidance', 'Personal attention', 'Therapist listened'],
+      averageRating: 5,
+    };
+
+    const drafts = await templateService.generateReviewDrafts(input);
+    expect(drafts).toHaveLength(3);
+    // With insights, drafts should be more substantive than sparse-only
+    for (const d of drafts) {
+      expect(d.content.length).toBeGreaterThan(10);
+    }
+  });
+
+  // ── Test Case 9: Insights-only input (no question answers beyond rating) ──
+
+  it('generates reviews from insights even without question answers', async () => {
+    const input: ReviewDraftInput = {
+      businessName: 'Style Studio',
+      categoryName: 'Salon',
+      answers: [
+        { questionText: 'How would you rate your visit?', questionType: 'STAR_RATING', rating: 4 },
+      ],
+      selectedInsights: ['Skilled stylist', 'Listened carefully'],
+      averageRating: 4,
+    };
+
+    const drafts = await templateService.generateReviewDrafts(input);
+    expect(drafts).toHaveLength(3);
+    expect(drafts.map(d => d.style)).toEqual(expect.arrayContaining(['PROFESSIONAL', 'FRIENDLY', 'CONCISE']));
+  });
 });

@@ -29,6 +29,7 @@ const sampleInput: ReviewDraftInput = {
   ],
   comment: 'Great food and lovely atmosphere!',
   averageRating: 4.7,
+  selectedInsights: ['Flavorful food', 'Cozy ambience', 'Welcoming staff'],
 };
 
 describe('AI Draft Generation Resilience', () => {

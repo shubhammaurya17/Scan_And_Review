@@ -14,6 +14,7 @@ export async function submitFeedback(slug: string, payload: {
   sessionToken: string;
   responses: Array<{ questionId: string; rating?: number; answer?: string }>;
   comment?: string;
+  selectedInsights?: string[];
 }) {
   const { data } = await api.post(`/review/${slug}/feedback`, payload);
   return data.data;

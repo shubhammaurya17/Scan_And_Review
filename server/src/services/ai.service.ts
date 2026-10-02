@@ -13,6 +13,7 @@ export interface ReviewDraftInput {
   answers: CustomerAnswer[];
   comment?: string;
   averageRating: number;
+  selectedInsights?: string[];
 }
 
 export interface GeneratedDraft {

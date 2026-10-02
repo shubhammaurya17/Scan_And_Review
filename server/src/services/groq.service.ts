@@ -149,6 +149,16 @@ RULES:
     if (input.comment) {
       lines.push(`- Additional comment: "${input.comment}" (customer's own words)`);
     }
+    if (input.selectedInsights && input.selectedInsights.length > 0) {
+      lines.push('');
+      lines.push('QUICK INSIGHTS (customer specifically highlighted these):');
+      for (const insight of input.selectedInsights) {
+        lines.push(`- ${insight}`);
+      }
+      lines.push('');
+      lines.push('IMPORTANT: Weave these insights naturally into the review — do NOT list them.');
+      lines.push('Unselected insights mean NOTHING — never interpret absence as negative.');
+    }
     return lines.join('\n');
   }
 
@@ -158,7 +168,8 @@ RULES:
       (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length)
     );
     const hasText = input.answers.some(a => a.questionType === 'TEXT' && a.textAnswer);
-    return !hasChips && !hasText && !input.comment;
+    const hasInsights = (input.selectedInsights?.length ?? 0) > 0;
+    return !hasChips && !hasText && !hasInsights && !input.comment;
   }
 
   async generateReply(review: string, businessName: string, tone: string): Promise<string> {

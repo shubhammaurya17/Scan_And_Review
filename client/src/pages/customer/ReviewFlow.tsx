@@ -2,6 +2,7 @@ import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import * as reviewApi from '../../services/reviewApi';
 import { RatingPage } from './steps/RatingPage';
+import InsightsPage from './steps/InsightsPage';
 import { CommentPage } from './steps/CommentPage';
 import { GeneratingPage } from './steps/GeneratingPage';
 import { DraftsPage } from './steps/DraftsPage';
@@ -9,7 +10,7 @@ import { HandoffPage } from './steps/HandoffPage';
 import { ThankYouPage } from './steps/ThankYouPage';
 import { RefreshCw } from 'lucide-react';
 
-type Step = 'loading' | 'rating' | 'comment' | 'generating' | 'drafts' | 'handoff' | 'done' | 'error';
+type Step = 'loading' | 'rating' | 'insights' | 'comment' | 'generating' | 'drafts' | 'handoff' | 'done' | 'error';
 
 const GENERATION_TIMEOUT_MS = 45000; // 45 seconds max for draft generation
 
@@ -21,6 +22,8 @@ interface State {
   businessId: string | null;
   responses: Record<string, { rating?: number; answer?: string }>;
   comment: string;
+  insights: Array<{ id: string; label: string }>;
+  selectedInsights: string[];
   drafts: any[];
   selectedDraftId: string | null;
   editedText: string | null;
@@ -36,6 +39,8 @@ type Action =
   | { type: 'SET_RESPONSE'; payload: { questionId: string; rating?: number; answer?: string } }
   | { type: 'SET_COMMENT'; payload: string }
   | { type: 'SET_STEP'; payload: Step }
+  | { type: 'SET_INSIGHTS'; payload: Array<{ id: string; label: string }> }
+  | { type: 'TOGGLE_INSIGHT'; payload: string }
   | { type: 'SET_DRAFTS'; payload: any[] }
   | { type: 'SELECT_DRAFT'; payload: { draftId: string; editedText?: string } }
   | { type: 'SET_GOOGLE_URL'; payload: string }
@@ -54,6 +59,8 @@ const initialState: State = {
   businessId: null,
   responses: {},
   comment: '',
+  insights: [],
+  selectedInsights: [],
   drafts: [],
   selectedDraftId: null,
   editedText: null,
@@ -87,6 +94,15 @@ function reducer(state: State, action: Action): State {
       return { ...state, comment: action.payload };
     case 'SET_STEP':
       return { ...state, step: action.payload };
+    case 'SET_INSIGHTS':
+      return { ...state, insights: action.payload };
+    case 'TOGGLE_INSIGHT':
+      return {
+        ...state,
+        selectedInsights: state.selectedInsights.includes(action.payload)
+          ? state.selectedInsights.filter(id => id !== action.payload)
+          : [...state.selectedInsights, action.payload],
+      };
     case 'SET_DRAFTS':
       return { ...state, drafts: action.payload, step: 'drafts', canRetry: action.payload.length === 0 };
     case 'SELECT_DRAFT':
@@ -151,6 +167,9 @@ export function ReviewFlow() {
             businessId: sessionData.businessId,
           },
         });
+        if (data.insights && data.insights.length > 0) {
+          dispatch({ type: 'SET_INSIGHTS', payload: data.insights });
+        }
       } catch (err: any) {
         dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || 'Business not found' });
       }
@@ -176,6 +195,7 @@ export function ReviewFlow() {
         sessionToken: state.sessionToken,
         responses: responseArray,
         comment: state.comment || undefined,
+        selectedInsights: state.selectedInsights.length > 0 ? state.selectedInsights : undefined,
       });
 
       const drafts = await reviewApi.generateDrafts(businessSlug, state.sessionToken);
@@ -265,8 +285,18 @@ export function ReviewFlow() {
             questions={state.questions}
             responses={state.responses}
             onSetResponse={handleSetResponse}
-            onSubmit={() => dispatch({ type: 'SET_STEP', payload: 'comment' })}
+            onSubmit={() => dispatch({ type: 'SET_STEP', payload: state.insights.length > 0 ? 'insights' : 'comment' })}
             isLoading={state.isLoading}
+          />
+        )}
+
+        {state.step === 'insights' && (
+          <InsightsPage
+            insights={state.insights}
+            selectedInsights={state.selectedInsights}
+            onToggle={(id) => dispatch({ type: 'TOGGLE_INSIGHT', payload: id })}
+            onContinue={() => dispatch({ type: 'SET_STEP', payload: 'comment' })}
+            onSkip={() => dispatch({ type: 'SET_STEP', payload: 'comment' })}
           />
         )}
 

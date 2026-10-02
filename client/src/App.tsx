@@ -14,6 +14,7 @@ import { LandingPage } from './pages/LandingPage';
 import AlertsPage from './pages/dashboard/AlertsPage';
 import GoogleConnectionPage from './pages/dashboard/GoogleConnectionPage';
 import GoogleReviewsPage from './pages/dashboard/GoogleReviewsPage';
+import InsightChipsPage from './pages/dashboard/InsightChipsPage';
 
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -40,6 +41,7 @@ export default function App() {
       }>
         <Route index element={<OverviewPage />} />
         <Route path="questions" element={<QuestionBuilderPage />} />
+        <Route path="insights" element={<InsightChipsPage />} />
         <Route path="qr-studio" element={<QRStudioPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />

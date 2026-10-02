@@ -117,6 +117,40 @@ describe('ReviewValidator', () => {
     expect(validator.validate(review, inputWithPrice).passed).toBe(true);
   });
 
+  // ── Insight presence check ──
+
+  it('passes when selected insight label appears in review', () => {
+    const inputWithInsights: ReviewDraftInput = {
+      ...richInput,
+      selectedInsights: ['Clear explanation', 'Personal attention', 'On time'],
+    };
+    const review = 'The therapist gave a clear explanation and I appreciated the personal attention during the session.';
+    expect(validator.validate(review, inputWithInsights).passed).toBe(true);
+  });
+
+  it('fails when no selected insight labels appear in review', () => {
+    const inputWithInsights: ReviewDraftInput = {
+      ...richInput,
+      selectedInsights: ['Clear explanation', 'Personal attention', 'On time'],
+    };
+    const review = 'Had a good session at Balance Plus. Everything was fine and the experience was pleasant.';
+    const result = validator.validate(review, inputWithInsights);
+    expect(result.passed).toBe(false);
+    expect(result.reasons.some(r => r.includes('insights'))).toBe(true);
+  });
+
+  it('isSparse returns false when selectedInsights provided', () => {
+    const inputWithInsights: ReviewDraftInput = {
+      ...sparseInput,
+      selectedInsights: ['Friendly staff'],
+    };
+    // With insights, even star-only answers should not be considered sparse
+    const review = 'The staff at Balance Plus were friendly and welcoming.';
+    const result = validator.validate(review, inputWithInsights);
+    // Should not fail specificity check since insights make it non-sparse
+    expect(result.reasons.some(r => r.includes('customer-provided details'))).toBe(false);
+  });
+
   // ── Test case from requirements: Balance Plus physiotherapy ──
 
   it('accepts a good physiotherapy review', () => {

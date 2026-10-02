@@ -64,3 +64,34 @@ export async function resetData(businessId: string) {
   const { data } = await api.delete(`/business/${businessId}/reset-data`);
   return data.data;
 }
+
+// Insight chips
+export async function getInsights(businessId: string) {
+  const res = await api.get(`/business/${businessId}/insights`);
+  return res.data;
+}
+
+export async function createInsight(businessId: string, payload: { label: string }) {
+  const res = await api.post(`/business/${businessId}/insights`, payload);
+  return res.data;
+}
+
+export async function updateInsight(businessId: string, insightId: string, payload: { label?: string; isActive?: boolean }) {
+  const res = await api.put(`/business/${businessId}/insights/${insightId}`, payload);
+  return res.data;
+}
+
+export async function deleteInsight(businessId: string, insightId: string) {
+  const res = await api.delete(`/business/${businessId}/insights/${insightId}`);
+  return res.data;
+}
+
+export async function reorderInsights(businessId: string, insightIds: string[]) {
+  const res = await api.put(`/business/${businessId}/insights/reorder`, { insightIds });
+  return res.data;
+}
+
+export async function resetInsights(businessId: string) {
+  const res = await api.post(`/business/${businessId}/insights/reset`);
+  return res.data;
+}

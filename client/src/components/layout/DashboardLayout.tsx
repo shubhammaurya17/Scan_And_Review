@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { alertApi } from '../../services/alertApi';
 import {
   LayoutDashboard, Star, BarChart3,
-  Bell, HelpCircle, QrCode, Link2, Settings, LogOut, Menu, X, Shield
+  Bell, HelpCircle, QrCode, Link2, Settings, LogOut, Menu, X, Shield, Sparkles
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
@@ -15,6 +15,7 @@ const navItems = [
   { to: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/dashboard/alerts', icon: Bell, label: 'Alerts' },
   { to: '/dashboard/questions', icon: HelpCircle, label: 'Questions' },
+  { to: '/dashboard/insights', icon: Sparkles, label: 'Insight Chips' },
   { to: '/dashboard/qr-studio', icon: QrCode, label: 'QR Studio' },
   { to: '/dashboard/google-connection', icon: Link2, label: 'Google Connection' },
   { to: '/dashboard/settings', icon: Settings, label: 'Settings' },

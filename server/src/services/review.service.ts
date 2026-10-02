@@ -24,6 +24,23 @@ export class ReviewService {
       throw new AppError('Business not found', 404);
     }
 
+    // Fetch insight chips for the business
+    let insights = await prisma.businessInsight.findMany({
+      where: { businessId: business.id, isActive: true },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, label: true },
+    });
+
+    // Fall back to category templates if no business-specific insights exist
+    if (insights.length === 0 && business.categoryId) {
+      const templates = await prisma.insightTemplate.findMany({
+        where: { categoryId: business.categoryId, isActive: true },
+        orderBy: { sortOrder: 'asc' },
+        select: { id: true, label: true },
+      });
+      insights = templates;
+    }
+
     return {
       business: {
         id: business.id,
@@ -42,6 +59,7 @@ export class ReviewService {
         placeholder: q.placeholder,
         sortOrder: q.sortOrder,
       })),
+      insights,
     };
   }
 
@@ -80,6 +98,7 @@ export class ReviewService {
     sessionToken: string;
     responses: Array<{ questionId: string; rating?: number; answer?: string }>;
     comment?: string;
+    selectedInsights?: string[];
   }) {
     const session = await prisma.reviewSession.findUnique({
       where: { sessionToken: data.sessionToken },
@@ -143,6 +162,26 @@ export class ReviewService {
           },
         });
       }
+
+      // Save selected insight chips
+      if (data.selectedInsights && data.selectedInsights.length > 0) {
+        for (const insightId of data.selectedInsights) {
+          await tx.selectedInsight.create({
+            data: {
+              sessionId: session.id,
+              insightId,
+            },
+          });
+        }
+
+        await tx.funnelEvent.create({
+          data: {
+            businessId: session.businessId,
+            sessionId: session.id,
+            eventType: 'INSIGHTS_SELECTED',
+          },
+        });
+      }
     });
 
     // Non-blocking: check for alerts
@@ -162,6 +201,7 @@ export class ReviewService {
         responses: { include: { question: true } },
         feedback: true,
         business: { include: { category: true } },
+        selectedInsights: { include: { insight: true } },
       },
     });
 
@@ -192,12 +232,17 @@ export class ReviewService {
       ? starRatings.reduce((sum, a) => sum + (a.rating || 0), 0) / starRatings.length
       : 3;
 
+    const selectedInsights = session.selectedInsights?.map(
+      (si: any) => si.insight.label
+    ) || [];
+
     const draftInput: ReviewDraftInput = {
       businessName: session.business.name,
       categoryName: session.business.category?.name || 'Business',
       answers,
       comment: session.feedback?.comment || undefined,
       averageRating,
+      selectedInsights,
     };
 
     let drafts: { style: string; content: string }[] = [];

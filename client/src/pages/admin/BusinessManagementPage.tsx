@@ -5,7 +5,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 
 interface BusinessFormState {
   id?: string;
@@ -32,6 +32,9 @@ export function BusinessManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<BusinessFormState>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-businesses', page],
@@ -118,6 +121,26 @@ export function BusinessManagementPage() {
   const toggleDemo = async (b: any) => {
     await adminApi.updateBusiness(b.id, { isDemo: !b.isDemo });
     invalidate();
+  };
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    setIsCreatingCategory(true);
+    try {
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const res = await adminApi.createCategory({ name, slug });
+      const newCat = res.data?.data || res.data;
+      // Refresh categories list and select the new one
+      await queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      setForm(f => ({ ...f, categoryId: newCat.id }));
+      setNewCategoryName('');
+      setShowNewCategory(false);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to create category');
+    } finally {
+      setIsCreatingCategory(false);
+    }
   };
 
   return (
@@ -218,14 +241,54 @@ export function BusinessManagementPage() {
                 <label className="block text-sm font-medium text-gray-700">Category</label>
                 <select
                   value={form.categoryId}
-                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                  onChange={(e) => {
+                    if (e.target.value === '__new__') {
+                      setShowNewCategory(true);
+                    } else {
+                      setForm({ ...form, categoryId: e.target.value });
+                      setShowNewCategory(false);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">None</option>
                   {(categories || []).map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
+                  <option value="__new__">＋ Add New Category...</option>
                 </select>
+                {showNewCategory && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateCategory()}
+                      placeholder="e.g. Gym, Spa, Clinic..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleCreateCategory}
+                      disabled={isCreatingCategory || !newCategoryName.trim()}
+                      className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Create category"
+                    >
+                      {isCreatingCategory ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      ) : (
+                        <Check size={16} />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => { setShowNewCategory(false); setNewCategoryName(''); }}
+                      className="p-2 text-gray-400 hover:text-gray-700"
+                      title="Cancel"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
               {!form.id && (
                 <>

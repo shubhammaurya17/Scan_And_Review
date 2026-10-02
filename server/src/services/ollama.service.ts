@@ -1,4 +1,4 @@
-import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult } from './ai.service';
+import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult, CustomerAnswer } from './ai.service';
 import { config } from '../config/env';
 
 export class OllamaService implements IAIService {
@@ -24,30 +24,33 @@ export class OllamaService implements IAIService {
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
     const styles = [
-      { style: 'PROFESSIONAL' as const, instruction: 'Write a balanced and authentic review. Use polished, specific language. Mention what stood out positively and note areas for improvement honestly.' },
-      { style: 'FRIENDLY' as const, instruction: 'Write a warm and natural review. Use conversational tone. Show genuine enthusiasm for positives and honest feedback about any negatives.' },
-      { style: 'CONCISE' as const, instruction: 'Write a short and direct review. Be brief — 1-2 sentences maximum. Hit the key points only.' },
+      { style: 'PROFESSIONAL' as const, instruction: 'Write a balanced and authentic review in 50-90 words. Use polished, specific language. Mention what stood out positively and note areas for improvement honestly.' },
+      { style: 'FRIENDLY' as const, instruction: 'Write a warm and natural review in 50-80 words. Use conversational tone. Show genuine enthusiasm for positives and honest feedback about any negatives.' },
+      { style: 'CONCISE' as const, instruction: 'Write a short and direct review in 30-50 words. Be brief — 1-2 sentences maximum. Hit the key points only.' },
     ];
 
-    const ratingsText = input.ratings
-      .map(r => `- ${r.questionText}: ${r.rating}/5`)
-      .join('\n');
+    const feedbackBlock = this.formatFeedbackBlock(input);
+    const sparse = this.isSparse(input);
+    const sparseNote = sparse
+      ? '\nNOTE: The customer provided only star ratings with no specific details. Write brief, honest reviews. Do NOT invent any specifics.'
+      : '';
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are helping a customer write a Google review for "${input.businessName}" (a ${input.categoryName}).
+        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for "${input.businessName}" (${input.categoryName}).
 
-The customer rated their experience:
-${ratingsText}
-Overall average: ${input.averageRating.toFixed(1)}/5
-${input.comment ? `\nCustomer's note: "${input.comment}"` : ''}
+CUSTOMER FEEDBACK:
+${feedbackBlock}
+
+Overall: ${input.averageRating.toFixed(1)}/5
 
 ${instruction}
+${sparseNote}
 
 IMPORTANT RULES:
 - Write from the customer's perspective (first person)
-- Only mention what the customer actually rated or commented on
-- Do NOT invent staff names, specific dishes, prices, or experiences not mentioned
+- Write ONLY from the facts provided above — do NOT invent details
+- Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
 - If ratings are low, reflect that honestly — do not turn negatives into positives
 - Keep it natural and authentic
 
@@ -64,6 +67,35 @@ Write only the review text, nothing else:`;
     );
 
     return drafts.filter((d): d is GeneratedDraft => d !== null);
+  }
+
+  private formatFeedbackBlock(input: ReviewDraftInput): string {
+    const lines: string[] = [];
+    for (const a of input.answers) {
+      if (a.questionType === 'STAR_RATING' && a.rating) {
+        lines.push(`- ${a.questionText}: ${a.rating}/5 stars`);
+      } else if (a.questionType === 'SINGLE_CHOICE' && a.selectedOption) {
+        lines.push(`- ${a.questionText}: "${a.selectedOption}" (customer selected)`);
+      } else if (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length) {
+        const chips = a.selectedOptions.map(o => `"${o}"`).join(', ');
+        lines.push(`- ${a.questionText}: ${chips} (customer selected these)`);
+      } else if (a.questionType === 'TEXT' && a.textAnswer) {
+        lines.push(`- ${a.questionText}: "${a.textAnswer}" (customer's own words)`);
+      }
+    }
+    if (input.comment) {
+      lines.push(`- Additional comment: "${input.comment}" (customer's own words)`);
+    }
+    return lines.join('\n');
+  }
+
+  private isSparse(input: ReviewDraftInput): boolean {
+    const hasChips = input.answers.some(a =>
+      (a.questionType === 'SINGLE_CHOICE' && a.selectedOption) ||
+      (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length)
+    );
+    const hasText = input.answers.some(a => a.questionType === 'TEXT' && a.textAnswer);
+    return !hasChips && !hasText && !input.comment;
   }
 
   async generateReply(review: string, businessName: string, tone: string): Promise<string> {

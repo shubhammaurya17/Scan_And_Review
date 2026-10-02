@@ -1,4 +1,4 @@
-import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult } from './ai.service';
+import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult, CustomerAnswer } from './ai.service';
 import { config } from '../config/env';
 
 interface GeminiResponse {
@@ -44,72 +44,91 @@ export class GeminiService implements IAIService {
   }
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
-    const ratingsText = input.ratings
-      .map(r => {
-        const emoji = r.rating >= 4 ? '👍' : r.rating <= 2 ? '👎' : '👌';
-        return `- ${r.questionText}: ${r.rating}/5 ${emoji}`;
-      })
-      .join('\n');
+    const feedbackBlock = this.formatFeedbackBlock(input);
+    const sparse = this.isSparse(input);
 
     const overallSentiment = input.averageRating >= 4 ? 'mostly positive'
       : input.averageRating >= 3 ? 'mixed'
       : 'mostly negative';
 
-    // Add randomness so Gemini generates completely different results every time
-    const randomSeed = Math.random().toString(36).substring(2, 10);
-    const timestamp = Date.now();
-    const randomAngle = ['what surprised them', 'what they noticed first', 'how it compared to expectations', 'the overall vibe', 'the one thing they keep thinking about'][Math.floor(Math.random() * 5)];
-    const randomOpener = ['Start with a feeling or reaction', 'Start with what happened', 'Start with a verdict', 'Start mid-thought', 'Start with a contrast'][Math.floor(Math.random() * 5)];
+    const sparseNote = sparse
+      ? '\nNOTE: The customer provided only star ratings with no specific details. Write brief, honest reviews. Do NOT invent any specifics. Keep each draft to 1-2 sentences.'
+      : '';
 
-    // Generate all 3 styles in a single API call for efficiency
-    const prompt = `You are ghostwriting a Google review on behalf of a real customer who just visited "${input.businessName}" (a ${input.categoryName} business).
+    const prompt = `You are helping a customer turn their actual feedback into a natural Google review for "${input.businessName}" (${input.categoryName}).
 
-Their ratings:
-${ratingsText}
+CUSTOMER FEEDBACK:
+${feedbackBlock}
 
-Overall impression: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
-${input.comment ? `Customer said in their own words: "${input.comment}"` : ''}
+Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
 
-Write 3 review drafts. Each one should read like it was typed by a real person — imperfect, personal, and honest. Think about how actual people write Google reviews: sometimes they ramble a bit, sometimes they're blunt, sometimes they mention one thing that stuck with them.
+INSTRUCTIONS:
+- Write the review ONLY from the facts provided above. Use the customer's selected options and their own words.
+- Do NOT invent details: no staff names, no specific dishes/products/treatments, no prices, no outcomes the customer didn't mention.
+- Do NOT add generic praise to fill space. Do NOT use marketing language.
+- Do NOT automatically include a recommendation phrase like "highly recommend".
+- Explain WHAT was good or bad rather than just saying it was good or bad.
+- The review should sound like a real customer describing what happened, not an advertisement.
+- Preserve the customer's actual sentiment — do not upgrade mixed/negative feedback.
+${sparseNote}
 
-DRAFT 1 — Thoughtful (3-4 sentences):
-Write like someone who took a moment to reflect. Natural flow, not a list. Mention what stood out (good or bad). Don't try to cover everything.
+Write exactly 3 drafts:
 
-DRAFT 2 — Casual (2-3 sentences):
-Write like someone tapping out a quick review on their phone. Relaxed grammar is fine. Show genuine feeling — excitement, disappointment, surprise, whatever fits the ratings.
+DRAFT 1 — Balanced & Authentic (50-90 words):
+A natural first-person review mentioning 1-3 concrete details from the feedback. Explain WHY things were good or bad.
 
-DRAFT 3 — Minimal (1-2 sentences):
-Write like someone who rarely leaves reviews but felt compelled to this time. Just the core takeaway.
+DRAFT 2 — Warm & Natural (50-80 words):
+Conversational and slightly warmer. Still grounded in the same customer facts. Different sentence structure and opening.
 
-HARD RULES:
-- First person only
-- NEVER invent specifics not in the ratings (no staff names, no menu items, no prices)
-- Match the sentiment to the actual scores — a 2/5 is not "pretty decent"
-- NO review clichés: avoid "exceeded expectations", "hidden gem", "I had the pleasure", "highly recommend", "will definitely be back", "top-notch"
-- Each draft must start differently — vary the first word and sentence structure
-- Keep it grounded: real reviews are specific about what was good/bad, not generic praise
-- Vary sentence length within each draft — mix short and longer sentences
-- IMPORTANT: Every generation must be completely unique. Never repeat phrasing from previous outputs.
-- Focus angle for this generation: ${randomAngle}
-- Opening style: ${randomOpener}
-- Uniqueness seed: ${randomSeed}-${timestamp}
+DRAFT 3 — Short & Direct (30-50 words):
+Brief but containing at least one specific detail from the feedback. No filler.
 
-Format your response EXACTLY like this (no extra text):
+CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts.
+
+Format EXACTLY:
 ---STYLE1---
-[draft text]
+[text]
 ---STYLE2---
-[draft text]
+[text]
 ---STYLE3---
-[draft text]`;
+[text]`;
 
     try {
       const content = await this.generate(prompt, 1.1, 700);
       return this.parseDrafts(content);
     } catch (err) {
       console.error('Gemini draft generation failed, trying individual calls:', err);
-      // Fallback: generate each style individually
-      return this.generateDraftsIndividually(input, ratingsText, overallSentiment);
+      return this.generateDraftsIndividually(input);
     }
+  }
+
+  private formatFeedbackBlock(input: ReviewDraftInput): string {
+    const lines: string[] = [];
+    for (const a of input.answers) {
+      if (a.questionType === 'STAR_RATING' && a.rating) {
+        lines.push(`- ${a.questionText}: ${a.rating}/5 stars`);
+      } else if (a.questionType === 'SINGLE_CHOICE' && a.selectedOption) {
+        lines.push(`- ${a.questionText}: "${a.selectedOption}" (customer selected)`);
+      } else if (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length) {
+        const chips = a.selectedOptions.map(o => `"${o}"`).join(', ');
+        lines.push(`- ${a.questionText}: ${chips} (customer selected these)`);
+      } else if (a.questionType === 'TEXT' && a.textAnswer) {
+        lines.push(`- ${a.questionText}: "${a.textAnswer}" (customer's own words)`);
+      }
+    }
+    if (input.comment) {
+      lines.push(`- Additional comment: "${input.comment}" (customer's own words)`);
+    }
+    return lines.join('\n');
+  }
+
+  private isSparse(input: ReviewDraftInput): boolean {
+    const hasChips = input.answers.some(a =>
+      (a.questionType === 'SINGLE_CHOICE' && a.selectedOption) ||
+      (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length)
+    );
+    const hasText = input.answers.some(a => a.questionType === 'TEXT' && a.textAnswer);
+    return !hasChips && !hasText && !input.comment;
   }
 
   private parseDrafts(content: string): GeneratedDraft[] {
@@ -145,48 +164,51 @@ Format your response EXACTLY like this (no extra text):
 
   private async generateDraftsIndividually(
     input: ReviewDraftInput,
-    ratingsText: string,
-    overallSentiment: string
   ): Promise<GeneratedDraft[]> {
-    const randomSeed = Math.random().toString(36).substring(2, 10);
-    const timestamp = Date.now();
-    const angles = ['what surprised you', 'what you noticed first', 'how it compared to expectations', 'the overall vibe', 'the one thing you keep thinking about'];
+    const feedbackBlock = this.formatFeedbackBlock(input);
+    const sparse = this.isSparse(input);
+
+    const overallSentiment = input.averageRating >= 4 ? 'mostly positive'
+      : input.averageRating >= 3 ? 'mixed'
+      : 'mostly negative';
+
+    const sparseNote = sparse
+      ? '\nNOTE: The customer provided only star ratings. Write a brief, honest review. Do NOT invent any specifics. Keep it to 1-2 sentences.'
+      : '';
+
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a thoughtful Google review in 3-4 sentences. Sound like someone reflecting on their visit — not listing pros and cons, just sharing what stuck with them. Be honest about what was good and what wasn't. Avoid review clichés. Focus on: ${angles[Math.floor(Math.random() * angles.length)]}.`,
+        instruction: `Write a balanced, authentic Google review in 50-90 words. A natural first-person review mentioning 1-3 concrete details from the feedback. Explain WHY things were good or bad.${sparseNote}`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a casual Google review in 2-3 sentences, like you're typing it on your phone right after leaving. Relaxed tone, real emotion, maybe a bit unpolished. Show personality — be enthusiastic, disappointed, or surprised based on the ratings. Focus on: ${angles[Math.floor(Math.random() * angles.length)]}.`,
+        instruction: `Write a warm, natural Google review in 50-80 words. Conversational and slightly warmer. Still grounded in the same customer facts. Different sentence structure and opening.${sparseNote}`,
       },
       {
         style: 'CONCISE' as const,
-        instruction: `Write a Google review in 1-2 sentences max. You rarely leave reviews — say only what compelled you to write this one. Be blunt and direct. Focus on: ${angles[Math.floor(Math.random() * angles.length)]}.`,
+        instruction: `Write a short, direct Google review in 30-50 words. Brief but containing at least one specific detail from the feedback. No filler.${sparseNote}`,
       },
     ];
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are a real customer writing a Google review for "${input.businessName}" (${input.categoryName}).
+        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for "${input.businessName}" (${input.categoryName}).
 
-Your ratings:
-${ratingsText}
+CUSTOMER FEEDBACK:
+${feedbackBlock}
 
 Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
-${input.comment ? `You noted: "${input.comment}"` : ''}
 
 ${instruction}
 
 RULES:
-- First person, as the customer
-- ONLY mention things from the ratings — never make up details
-- Match tone to the actual scores
-- NO clichés like "hidden gem", "exceeded expectations", "highly recommend", "will definitely be back"
-- IMPORTANT: Every generation must produce completely unique text. Never repeat prior phrasing.
-- Don't start with the business name
-- Output ONLY the review text, nothing else
-- Uniqueness seed: ${randomSeed}-${timestamp}`;
+- Write in first person as the customer
+- Write ONLY from the facts provided above — do NOT invent details
+- Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
+- Preserve the customer's actual sentiment
+- Do NOT start with the business name
+- Output ONLY the review text, nothing else`;
 
         try {
           const content = await this.generate(prompt, 1.2, 250);

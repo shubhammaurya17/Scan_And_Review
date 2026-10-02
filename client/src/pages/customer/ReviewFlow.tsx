@@ -2,13 +2,14 @@ import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import * as reviewApi from '../../services/reviewApi';
 import { RatingPage } from './steps/RatingPage';
+import { CommentPage } from './steps/CommentPage';
 import { GeneratingPage } from './steps/GeneratingPage';
 import { DraftsPage } from './steps/DraftsPage';
 import { HandoffPage } from './steps/HandoffPage';
 import { ThankYouPage } from './steps/ThankYouPage';
 import { RefreshCw } from 'lucide-react';
 
-type Step = 'loading' | 'rating' | 'generating' | 'drafts' | 'handoff' | 'done' | 'error';
+type Step = 'loading' | 'rating' | 'comment' | 'generating' | 'drafts' | 'handoff' | 'done' | 'error';
 
 const GENERATION_TIMEOUT_MS = 45000; // 45 seconds max for draft generation
 
@@ -18,7 +19,8 @@ interface State {
   questions: any[];
   sessionToken: string | null;
   businessId: string | null;
-  ratings: Record<string, number>;
+  responses: Record<string, { rating?: number; answer?: string }>;
+  comment: string;
   drafts: any[];
   selectedDraftId: string | null;
   editedText: string | null;
@@ -31,7 +33,8 @@ interface State {
 
 type Action =
   | { type: 'SET_BUSINESS'; payload: { business: any; questions: any[]; sessionToken: string; businessId: string } }
-  | { type: 'SET_RATING'; payload: { questionId: string; rating: number } }
+  | { type: 'SET_RESPONSE'; payload: { questionId: string; rating?: number; answer?: string } }
+  | { type: 'SET_COMMENT'; payload: string }
   | { type: 'SET_STEP'; payload: Step }
   | { type: 'SET_DRAFTS'; payload: any[] }
   | { type: 'SELECT_DRAFT'; payload: { draftId: string; editedText?: string } }
@@ -49,7 +52,8 @@ const initialState: State = {
   questions: [],
   sessionToken: null,
   businessId: null,
-  ratings: {},
+  responses: {},
+  comment: '',
   drafts: [],
   selectedDraftId: null,
   editedText: null,
@@ -71,8 +75,16 @@ function reducer(state: State, action: Action): State {
         businessId: action.payload.businessId,
         step: 'rating',
       };
-    case 'SET_RATING':
-      return { ...state, ratings: { ...state.ratings, [action.payload.questionId]: action.payload.rating } };
+    case 'SET_RESPONSE':
+      return {
+        ...state,
+        responses: {
+          ...state.responses,
+          [action.payload.questionId]: { rating: action.payload.rating, answer: action.payload.answer },
+        },
+      };
+    case 'SET_COMMENT':
+      return { ...state, comment: action.payload };
     case 'SET_STEP':
       return { ...state, step: action.payload };
     case 'SET_DRAFTS':
@@ -145,19 +157,25 @@ export function ReviewFlow() {
     })();
   }, [businessSlug]);
 
-  const handleSetRating = (questionId: string, rating: number) => {
-    dispatch({ type: 'SET_RATING', payload: { questionId, rating } });
+  const handleSetResponse = (questionId: string, data: { rating?: number; answer?: string }) => {
+    dispatch({ type: 'SET_RESPONSE', payload: { questionId, rating: data.rating, answer: data.answer } });
   };
 
-  const handleSubmitRatings = async () => {
+  const handleSubmitFeedback = async () => {
     if (!businessSlug || !state.sessionToken) return;
     dispatch({ type: 'SET_STEP', payload: 'generating' });
     dispatch({ type: 'SET_LOADING', payload: true });
 
     try {
+      const responseArray = Object.entries(state.responses).map(([questionId, resp]) => ({
+        questionId,
+        rating: resp.rating,
+        answer: resp.answer,
+      }));
       await reviewApi.submitFeedback(businessSlug, {
         sessionToken: state.sessionToken,
-        ratings: Object.entries(state.ratings).map(([questionId, rating]) => ({ questionId, rating })),
+        responses: responseArray,
+        comment: state.comment || undefined,
       });
 
       const drafts = await reviewApi.generateDrafts(businessSlug, state.sessionToken);
@@ -245,10 +263,19 @@ export function ReviewFlow() {
           <RatingPage
             business={state.business}
             questions={state.questions}
-            ratings={state.ratings}
-            onSetRating={handleSetRating}
-            onSubmit={handleSubmitRatings}
+            responses={state.responses}
+            onSetResponse={handleSetResponse}
+            onSubmit={() => dispatch({ type: 'SET_STEP', payload: 'comment' })}
             isLoading={state.isLoading}
+          />
+        )}
+
+        {state.step === 'comment' && (
+          <CommentPage
+            comment={state.comment}
+            onSetComment={(c) => dispatch({ type: 'SET_COMMENT', payload: c })}
+            onSubmit={handleSubmitFeedback}
+            onSkip={handleSubmitFeedback}
           />
         )}
 

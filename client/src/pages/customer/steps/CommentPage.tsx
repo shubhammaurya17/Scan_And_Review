@@ -10,13 +10,13 @@ interface Props {
 export function CommentPage({ comment, onSetComment, onSubmit, onSkip }: Props) {
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-2">Anything else?</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-2">Anything else you'd like to mention?</h2>
       <p className="text-gray-500 text-sm mb-6">Share any additional thoughts (optional)</p>
 
       <textarea
         value={comment}
         onChange={(e) => onSetComment(e.target.value)}
-        placeholder="What stood out during your visit?"
+        placeholder="Something specific you noticed, liked, or think could be better..."
         maxLength={500}
         rows={4}
         className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"

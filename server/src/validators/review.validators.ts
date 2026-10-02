@@ -4,10 +4,14 @@ import { z } from 'zod';
 // sessionToken is UUID (generated with uuid v4)
 export const submitFeedbackSchema = z.object({
   sessionToken: z.string().uuid(),
-  ratings: z.array(z.object({
+  responses: z.array(z.object({
     questionId: z.string().min(1),
-    rating: z.number().int().min(1).max(5),
-  })).min(1),
+    rating: z.number().int().min(1).max(5).optional(),
+    answer: z.string().max(500).optional(),
+  })).min(1).refine(
+    arr => arr.every(r => r.rating != null || (r.answer != null && r.answer.length > 0)),
+    { message: 'Each response must have either a rating or an answer' }
+  ),
   comment: z.string().max(500).optional(),
 });
 

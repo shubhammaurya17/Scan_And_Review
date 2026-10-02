@@ -69,24 +69,30 @@ model Category {
 }
 
 model QuestionTemplate {
-  id         String   @id @default(cuid())
-  categoryId String
-  text       String
-  sortOrder  Int
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  categoryId  String
+  text        String
+  type        String   @default("STAR_RATING") // STAR_RATING | SINGLE_CHOICE | MULTI_CHOICE | TEXT
+  options     String?  // JSON array of chip labels for choice types
+  placeholder String?  // hint text for TEXT type
+  sortOrder   Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 }
 
 model BusinessQuestion {
-  id         String             @id @default(cuid())
-  businessId String
-  text       String
-  sortOrder  Int
-  isActive   Boolean            @default(true)
-  createdAt  DateTime           @default(now())
-  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  responses  CustomerResponse[]
+  id          String             @id @default(cuid())
+  businessId  String
+  text        String
+  type        String             @default("STAR_RATING") // STAR_RATING | SINGLE_CHOICE | MULTI_CHOICE | TEXT
+  options     String?            // JSON array of chip labels for choice types
+  placeholder String?            // hint text for TEXT type
+  sortOrder   Int
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  business    Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  responses   CustomerResponse[]
 }
 
 model ReviewSession {
@@ -108,7 +114,8 @@ model CustomerResponse {
   id         String           @id @default(cuid())
   sessionId  String
   questionId String
-  rating     Int
+  rating     Int?             // for STAR_RATING questions (1-5)
+  answer     String?          // for SINGLE_CHOICE, MULTI_CHOICE (JSON), TEXT questions
   createdAt  DateTime         @default(now())
   session    ReviewSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   question   BusinessQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)

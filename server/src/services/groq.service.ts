@@ -1,4 +1,4 @@
-import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult } from './ai.service';
+import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult, CustomerAnswer } from './ai.service';
 import { config } from '../config/env';
 
 interface ChatCompletionResponse {
@@ -70,57 +70,54 @@ export class GroqService implements IAIService {
   }
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
-    const styles = [
-      {
-        style: 'PROFESSIONAL' as const,
-        instruction: `Write a polished, genuine Google review in 3-4 sentences. Sound like a real person who visited — be specific about what was good or bad based on the ratings. Use natural, confident language. No generic filler phrases like "I had the pleasure" or "I would recommend". Just honest, clear feedback.`,
-      },
-      {
-        style: 'FRIENDLY' as const,
-        instruction: `Write a casual, upbeat Google review in 2-3 sentences. Sound like you're telling a friend about the place. Use conversational language — contractions, simple words, genuine emotion. If something was great, show excitement. If something was lacking, be honest but kind.`,
-      },
-      {
-        style: 'CONCISE' as const,
-        instruction: `Write a brief, punchy Google review in 1-2 sentences max. Get straight to the point — what was good, what wasn't. No fluff, no pleasantries. Think of it as a quick summary for someone scrolling through reviews.`,
-      },
-    ];
-
-    const ratingsText = input.ratings
-      .map(r => {
-        const emoji = r.rating >= 4 ? '👍' : r.rating <= 2 ? '👎' : '👌';
-        return `- ${r.questionText}: ${r.rating}/5 ${emoji}`;
-      })
-      .join('\n');
+    const feedbackBlock = this.formatFeedbackBlock(input);
+    const sparse = this.isSparse(input);
 
     const overallSentiment = input.averageRating >= 4 ? 'mostly positive'
       : input.averageRating >= 3 ? 'mixed'
       : 'mostly negative';
 
+    const sparseNote = sparse
+      ? '\nNOTE: The customer provided only star ratings with no specific details. Write brief, honest reviews. Do NOT invent any specifics. Keep each draft to 1-2 sentences.'
+      : '';
+
+    const styles = [
+      {
+        style: 'PROFESSIONAL' as const,
+        instruction: `Write a balanced, authentic Google review in 50-90 words. A natural first-person review mentioning 1-3 concrete details from the feedback. Explain WHY things were good or bad.${sparseNote}`,
+      },
+      {
+        style: 'FRIENDLY' as const,
+        instruction: `Write a warm, natural Google review in 50-80 words. Conversational and slightly warmer. Still grounded in the same customer facts. Different sentence structure and opening.${sparseNote}`,
+      },
+      {
+        style: 'CONCISE' as const,
+        instruction: `Write a short, direct Google review in 30-50 words. Brief but containing at least one specific detail from the feedback. No filler.${sparseNote}`,
+      },
+    ];
+
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are a real customer writing a Google review for "${input.businessName}" (${input.categoryName}).
+        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for "${input.businessName}" (${input.categoryName}).
 
-Here's how you rated your visit:
-${ratingsText}
+CUSTOMER FEEDBACK:
+${feedbackBlock}
 
 Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
-${input.comment ? `\nYour personal note: "${input.comment}"` : ''}
 
 ${instruction}
 
-CRITICAL RULES:
+RULES:
 - Write in first person as the customer
-- ONLY reference things the ratings and comments actually cover — never invent details
-- Do NOT mention specific staff names, dish names, prices, or events unless the customer wrote about them
-- Match the tone to the ratings — don't sugarcoat low ratings or be overly excited about mediocre ones
-- Sound like a real Google review, not an AI-generated one
+- Write ONLY from the facts provided above — do NOT invent details
+- Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
+- Preserve the customer's actual sentiment
 - Do NOT start with the business name
 - Do NOT use quotation marks around the review
 - Output ONLY the review text, nothing else`;
 
         try {
           const content = await this.generate(prompt, 0.8, 200);
-          // Clean up any accidental quotation marks or prefixes
           let cleaned = content.trim();
           cleaned = cleaned.replace(/^["']|["']$/g, '');
           cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
@@ -133,6 +130,35 @@ CRITICAL RULES:
     );
 
     return drafts.filter((d): d is GeneratedDraft => d !== null);
+  }
+
+  private formatFeedbackBlock(input: ReviewDraftInput): string {
+    const lines: string[] = [];
+    for (const a of input.answers) {
+      if (a.questionType === 'STAR_RATING' && a.rating) {
+        lines.push(`- ${a.questionText}: ${a.rating}/5 stars`);
+      } else if (a.questionType === 'SINGLE_CHOICE' && a.selectedOption) {
+        lines.push(`- ${a.questionText}: "${a.selectedOption}" (customer selected)`);
+      } else if (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length) {
+        const chips = a.selectedOptions.map(o => `"${o}"`).join(', ');
+        lines.push(`- ${a.questionText}: ${chips} (customer selected these)`);
+      } else if (a.questionType === 'TEXT' && a.textAnswer) {
+        lines.push(`- ${a.questionText}: "${a.textAnswer}" (customer's own words)`);
+      }
+    }
+    if (input.comment) {
+      lines.push(`- Additional comment: "${input.comment}" (customer's own words)`);
+    }
+    return lines.join('\n');
+  }
+
+  private isSparse(input: ReviewDraftInput): boolean {
+    const hasChips = input.answers.some(a =>
+      (a.questionType === 'SINGLE_CHOICE' && a.selectedOption) ||
+      (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length)
+    );
+    const hasText = input.answers.some(a => a.questionType === 'TEXT' && a.textAnswer);
+    return !hasChips && !hasText && !input.comment;
   }
 
   async generateReply(review: string, businessName: string, tone: string): Promise<string> {

@@ -2,19 +2,37 @@ import { StarRating } from '../../../components/ui/StarRating';
 import { Button } from '../../../components/ui/Button';
 import { Star } from 'lucide-react';
 
+interface Question {
+  id: string;
+  text: string;
+  type: 'STAR_RATING' | 'SINGLE_CHOICE' | 'MULTI_CHOICE' | 'TEXT';
+  options: string[] | null;
+  placeholder: string | null;
+  sortOrder: number;
+}
+
 interface Props {
   business: { name: string; description?: string; logoUrl?: string; isDemo?: boolean };
-  questions: Array<{ id: string; text: string; sortOrder: number }>;
-  ratings: Record<string, number>;
-  onSetRating: (questionId: string, rating: number) => void;
+  questions: Question[];
+  responses: Record<string, { rating?: number; answer?: string }>;
+  onSetResponse: (questionId: string, data: { rating?: number; answer?: string }) => void;
   onSubmit: () => void;
   isLoading: boolean;
 }
 
-export function RatingPage({ business, questions, ratings, onSetRating, onSubmit, isLoading }: Props) {
-  const allRated = questions.every(q => ratings[q.id] > 0);
-  const avgRating = Object.values(ratings).length > 0
-    ? Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length
+export function RatingPage({ business, questions, responses, onSetResponse, onSubmit, isLoading }: Props) {
+  const isComplete = questions.every(q => {
+    if (q.type === 'STAR_RATING') return (responses[q.id]?.rating ?? 0) > 0;
+    if (q.type === 'SINGLE_CHOICE') return !!responses[q.id]?.answer;
+    return true; // MULTI_CHOICE and TEXT are optional
+  });
+
+  const starResponses = questions
+    .filter(q => q.type === 'STAR_RATING')
+    .map(q => responses[q.id]?.rating)
+    .filter((r): r is number => r != null && r > 0);
+  const avgRating = starResponses.length > 0
+    ? starResponses.reduce((a, b) => a + b, 0) / starResponses.length
     : 0;
 
   return (
@@ -34,8 +52,8 @@ export function RatingPage({ business, questions, ratings, onSetRating, onSubmit
         )}
       </div>
 
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Rate Your Experience</h2>
-      <p className="text-gray-500 text-sm mb-5">Tap the stars to rate each aspect</p>
+      <h2 className="text-xl font-bold text-gray-900 mb-1">Share Your Feedback</h2>
+      <p className="text-gray-500 text-sm mb-5">Help us understand your experience</p>
 
       <div className="space-y-4">
         {questions.map((q, index) => (
@@ -44,24 +62,91 @@ export function RatingPage({ business, questions, ratings, onSetRating, onSubmit
               <span className="text-sm font-medium text-gray-900">{q.text}</span>
               <span className="text-xs text-gray-400">{index + 1}/{questions.length}</span>
             </div>
-            <div className="flex justify-center mt-3">
-              <StarRating
-                value={ratings[q.id] || 0}
-                onChange={(rating) => onSetRating(q.id, rating)}
-                size="lg"
-                label={q.text}
-              />
-            </div>
-            {ratings[q.id] > 0 && (
+
+            {q.type === 'STAR_RATING' && (
+              <div className="flex justify-center mt-3">
+                <StarRating
+                  value={responses[q.id]?.rating || 0}
+                  onChange={(rating) => onSetResponse(q.id, { rating })}
+                  size="lg"
+                  label={q.text}
+                />
+              </div>
+            )}
+
+            {q.type === 'STAR_RATING' && (responses[q.id]?.rating ?? 0) > 0 && (
               <p className="text-center text-xs text-gray-400 mt-1">
-                {ratings[q.id] === 5 ? 'Excellent!' : ratings[q.id] === 4 ? 'Great!' : ratings[q.id] === 3 ? 'Good' : ratings[q.id] === 2 ? 'Fair' : 'Poor'}
+                {responses[q.id]?.rating === 5 ? 'Excellent!' : responses[q.id]?.rating === 4 ? 'Great!' : responses[q.id]?.rating === 3 ? 'Good' : responses[q.id]?.rating === 2 ? 'Fair' : 'Poor'}
               </p>
+            )}
+
+            {q.type === 'SINGLE_CHOICE' && q.options && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {q.options.map(opt => {
+                  const selected = responses[q.id]?.answer === opt;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => onSetResponse(q.id, { answer: opt })}
+                      className={`px-3 py-1.5 rounded-full text-sm border transition-all ${
+                        selected
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {q.type === 'MULTI_CHOICE' && q.options && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {q.options.map(opt => {
+                  const currentAnswers: string[] = (() => {
+                    try { return responses[q.id]?.answer ? JSON.parse(responses[q.id].answer!) : []; }
+                    catch { return []; }
+                  })();
+                  const selected = currentAnswers.includes(opt);
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        const updated = selected
+                          ? currentAnswers.filter(a => a !== opt)
+                          : [...currentAnswers, opt];
+                        onSetResponse(q.id, { answer: updated.length > 0 ? JSON.stringify(updated) : undefined });
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm border transition-all ${
+                        selected
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                      }`}
+                    >
+                      {selected && <span className="mr-1">&#10003;</span>}
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {q.type === 'TEXT' && (
+              <textarea
+                value={responses[q.id]?.answer || ''}
+                onChange={(e) => onSetResponse(q.id, { answer: e.target.value || undefined })}
+                placeholder={q.placeholder || 'Share your thoughts...'}
+                maxLength={500}
+                rows={2}
+                className="w-full mt-3 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
             )}
           </div>
         ))}
       </div>
 
-      {allRated && avgRating > 0 && (
+      {isComplete && avgRating > 0 && (
         <div className="text-center mt-4">
           <span className="text-sm text-gray-500">Overall: </span>
           <span className="text-sm font-semibold text-primary-600">{avgRating.toFixed(1)}/5</span>
@@ -70,12 +155,12 @@ export function RatingPage({ business, questions, ratings, onSetRating, onSubmit
 
       <Button
         onClick={onSubmit}
-        disabled={!allRated}
+        disabled={!isComplete}
         isLoading={isLoading}
         size="lg"
         className="w-full mt-6"
       >
-        Generate My Review
+        Continue
       </Button>
     </div>
   );

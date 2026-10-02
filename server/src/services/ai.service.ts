@@ -1,7 +1,16 @@
+export interface CustomerAnswer {
+  questionText: string;
+  questionType: 'STAR_RATING' | 'SINGLE_CHOICE' | 'MULTI_CHOICE' | 'TEXT';
+  rating?: number;
+  selectedOption?: string;
+  selectedOptions?: string[];
+  textAnswer?: string;
+}
+
 export interface ReviewDraftInput {
   businessName: string;
   categoryName: string;
-  ratings: Array<{ questionText: string; rating: number }>;
+  answers: CustomerAnswer[];
   comment?: string;
   averageRating: number;
 }
@@ -12,7 +21,7 @@ export interface GeneratedDraft {
 }
 
 export interface SentimentResult {
-  score: number; // -1 to 1
+  score: number;
   label: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
 }
 

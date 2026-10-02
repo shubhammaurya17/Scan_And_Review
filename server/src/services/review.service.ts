@@ -1,6 +1,8 @@
 import { prisma } from '../config/database';
 import { getAIServiceAsync } from './ai-factory';
 import { TemplateService } from './template.service';
+import { ReviewValidator } from './review-validator.service';
+import { CustomerAnswer, ReviewDraftInput } from './ai.service';
 import { AppError } from '../utils/AppError';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
@@ -35,6 +37,9 @@ export class ReviewService {
       questions: business.questions.map(q => ({
         id: q.id,
         text: q.text,
+        type: q.type,
+        options: q.options ? JSON.parse(q.options) : null,
+        placeholder: q.placeholder,
         sortOrder: q.sortOrder,
       })),
     };
@@ -73,7 +78,7 @@ export class ReviewService {
 
   async submitFeedback(slug: string, data: {
     sessionToken: string;
-    ratings: Array<{ questionId: string; rating: number }>;
+    responses: Array<{ questionId: string; rating?: number; answer?: string }>;
     comment?: string;
   }) {
     const session = await prisma.reviewSession.findUnique({
@@ -84,9 +89,9 @@ export class ReviewService {
     if (!session) throw new AppError('Session not found', 404);
     if (session.business.slug !== slug) throw new AppError('Session does not match business', 400);
 
-    // Validate all active questions have ratings
+    // Validate all question IDs are active
     const activeQuestionIds = new Set(session.business.questions.map(q => q.id));
-    for (const r of data.ratings) {
+    for (const r of data.responses) {
       if (!activeQuestionIds.has(r.questionId)) {
         throw new AppError(`Invalid question ID: ${r.questionId}`, 400);
       }
@@ -97,12 +102,13 @@ export class ReviewService {
       // Delete existing responses for this session (in case of re-submission)
       await tx.customerResponse.deleteMany({ where: { sessionId: session.id } });
 
-      for (const r of data.ratings) {
+      for (const r of data.responses) {
         await tx.customerResponse.create({
           data: {
             sessionId: session.id,
             questionId: r.questionId,
-            rating: r.rating,
+            rating: r.rating ?? null,
+            answer: r.answer ?? null,
           },
         });
       }
@@ -163,17 +169,33 @@ export class ReviewService {
     if (session.business.slug !== slug) throw new AppError('Session does not match business', 400);
     if (session.responses.length === 0) throw new AppError('No ratings submitted yet', 400);
 
-    const ratings = session.responses.map(r => ({
-      questionText: r.question.text,
-      rating: r.rating,
-    }));
+    const answers = session.responses.map(r => {
+      const q = r.question;
+      const answer: CustomerAnswer = {
+        questionText: q.text,
+        questionType: q.type as CustomerAnswer['questionType'],
+      };
+      if (q.type === 'STAR_RATING') {
+        answer.rating = r.rating ?? undefined;
+      } else if (q.type === 'SINGLE_CHOICE') {
+        answer.selectedOption = r.answer ?? undefined;
+      } else if (q.type === 'MULTI_CHOICE') {
+        try { answer.selectedOptions = r.answer ? JSON.parse(r.answer) : undefined; } catch { answer.selectedOptions = undefined; }
+      } else if (q.type === 'TEXT') {
+        answer.textAnswer = r.answer ?? undefined;
+      }
+      return answer;
+    });
 
-    const averageRating = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+    const starRatings = answers.filter(a => a.questionType === 'STAR_RATING' && a.rating);
+    const averageRating = starRatings.length > 0
+      ? starRatings.reduce((sum, a) => sum + (a.rating || 0), 0) / starRatings.length
+      : 3;
 
-    const draftInput = {
+    const draftInput: ReviewDraftInput = {
       businessName: session.business.name,
       categoryName: session.business.category?.name || 'Business',
-      ratings,
+      answers,
       comment: session.feedback?.comment || undefined,
       averageRating,
     };
@@ -192,6 +214,51 @@ export class ReviewService {
       console.error(`❌ ${serviceName} threw during draft generation:`, err);
       // drafts stays [] — will trigger template fallback below
     }
+
+    // Validate drafts with ReviewValidator
+    const validator = new ReviewValidator();
+    const validatedDrafts: { style: string; content: string }[] = [];
+    const failedDrafts: { style: string; content: string; reasons: string[] }[] = [];
+
+    for (const d of drafts) {
+      const result = validator.validate(d.content, draftInput);
+      if (result.passed) {
+        validatedDrafts.push(d);
+      } else {
+        console.warn(`Draft ${d.style} failed validation: ${result.reasons.join(', ')}`);
+        failedDrafts.push({ ...d, reasons: result.reasons });
+      }
+    }
+
+    // Retry failed drafts once
+    if (failedDrafts.length > 0 && drafts.length > 0) {
+      try {
+        const retryDrafts = await aiService.generateReviewDrafts(draftInput);
+        const retryFiltered = retryDrafts.filter(d => d.content && d.content.trim().length > 0);
+        for (const failed of failedDrafts) {
+          const retry = retryFiltered.find(r => r.style === failed.style);
+          if (retry) {
+            const retryResult = validator.validate(retry.content, draftInput);
+            if (retryResult.passed) {
+              validatedDrafts.push(retry);
+              console.log(`✅ Retry for ${failed.style} passed validation`);
+            } else {
+              console.warn(`Retry for ${failed.style} also failed, using original`);
+              validatedDrafts.push({ style: failed.style, content: failed.content });
+            }
+          } else {
+            validatedDrafts.push({ style: failed.style, content: failed.content });
+          }
+        }
+      } catch (retryErr) {
+        console.error('Retry generation failed, using original drafts:', retryErr);
+        for (const failed of failedDrafts) {
+          validatedDrafts.push({ style: failed.style, content: failed.content });
+        }
+      }
+    }
+
+    drafts = validatedDrafts;
 
     // If AI returned some but fewer than 3, supplement with templates instead of discarding AI drafts
     if (drafts.length > 0 && drafts.length < 3) {

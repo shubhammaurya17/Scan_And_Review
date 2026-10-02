@@ -22,10 +22,10 @@ vi.mock('../../config/database', () => ({
 const sampleInput: ReviewDraftInput = {
   businessName: "Bella's Italian Kitchen",
   categoryName: 'Restaurant',
-  ratings: [
-    { questionText: 'Food quality', rating: 5 },
-    { questionText: 'Service', rating: 4 },
-    { questionText: 'Ambience', rating: 5 },
+  answers: [
+    { questionText: 'Food quality', questionType: 'STAR_RATING', rating: 5 },
+    { questionText: 'Service', questionType: 'STAR_RATING', rating: 4 },
+    { questionText: 'Ambience', questionType: 'STAR_RATING', rating: 5 },
   ],
   comment: 'Great food and lovely atmosphere!',
   averageRating: 4.7,

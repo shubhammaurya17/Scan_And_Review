@@ -127,7 +127,14 @@ export class AdminController {
           });
           for (const t of templates) {
             await tx.businessQuestion.create({
-              data: { businessId: business.id, text: t.text, sortOrder: t.sortOrder },
+              data: {
+                businessId: business.id,
+                text: t.text,
+                type: t.type,
+                options: t.options,
+                placeholder: t.placeholder,
+                sortOrder: t.sortOrder,
+              },
             });
           }
         }

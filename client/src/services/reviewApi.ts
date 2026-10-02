@@ -12,7 +12,7 @@ export async function startSession(slug: string) {
 
 export async function submitFeedback(slug: string, payload: {
   sessionToken: string;
-  ratings: Array<{ questionId: string; rating: number }>;
+  responses: Array<{ questionId: string; rating?: number; answer?: string }>;
   comment?: string;
 }) {
   const { data } = await api.post(`/review/${slug}/feedback`, payload);

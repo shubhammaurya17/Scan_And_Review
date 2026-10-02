@@ -1,7 +1,10 @@
-import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult } from './ai.service';
+import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult, CustomerAnswer } from './ai.service';
 
 /**
- * Extract the topic noun from a question like "How was the service?" → "service"
+ * Extract a topic from a question or answer.
+ * For STAR_RATING: extract topic noun from question like "How was the service?" -> "service"
+ * For SINGLE/MULTI_CHOICE: use selected option(s) as topic
+ * For TEXT: use first meaningful words from answer
  */
 function extractTopic(questionText: string): string {
   let topic = questionText
@@ -12,12 +15,61 @@ function extractTopic(questionText: string): string {
     .trim()
     .toLowerCase();
 
-  // Fallback: if we didn't extract anything meaningful, use original minus question mark
   if (!topic || topic.length < 2) {
     topic = questionText.replace(/\?+\s*$/, '').trim().toLowerCase();
   }
 
   return topic;
+}
+
+/**
+ * Extract topic names from customer answers — uses chip selections and text answers
+ * as well as question text for star ratings.
+ */
+function extractTopicsFromAnswers(answers: CustomerAnswer[]): { highTopic: string; lowTopic: string; highRating: number; lowRating: number } {
+  // For star ratings, sort by rating to find high/low
+  const starAnswers = answers.filter(a => a.questionType === 'STAR_RATING' && a.rating);
+
+  let highTopic = '';
+  let lowTopic = '';
+  let highRating = 0;
+  let lowRating = 5;
+
+  if (starAnswers.length > 0) {
+    const sorted = [...starAnswers].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    highTopic = extractTopic(sorted[0].questionText);
+    highRating = sorted[0].rating || 0;
+    lowTopic = extractTopic(sorted[sorted.length - 1].questionText);
+    lowRating = sorted[sorted.length - 1].rating || 0;
+  }
+
+  // Enrich with chip selections if available
+  const chipAnswers = answers.filter(a =>
+    (a.questionType === 'SINGLE_CHOICE' && a.selectedOption) ||
+    (a.questionType === 'MULTI_CHOICE' && a.selectedOptions?.length)
+  );
+  if (chipAnswers.length > 0) {
+    const firstChip = chipAnswers[0];
+    if (firstChip.selectedOption) {
+      highTopic = firstChip.selectedOption.toLowerCase();
+    } else if (firstChip.selectedOptions?.length) {
+      highTopic = firstChip.selectedOptions[0].toLowerCase();
+    }
+  }
+
+  // Use text answers if available
+  const textAnswers = answers.filter(a => a.questionType === 'TEXT' && a.textAnswer);
+  if (textAnswers.length > 0 && textAnswers[0].textAnswer) {
+    const words = textAnswers[0].textAnswer.split(/\s+/).filter(w => w.length >= 4).slice(0, 3);
+    if (words.length > 0) {
+      highTopic = words.join(' ').toLowerCase();
+    }
+  }
+
+  if (!highTopic) highTopic = 'experience';
+  if (!lowTopic) lowTopic = highTopic;
+
+  return { highTopic, lowTopic, highRating, lowRating };
 }
 
 // Randomize phrasing to avoid repetition
@@ -32,14 +84,7 @@ export class TemplateService implements IAIService {
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
     const avgRating = input.averageRating;
-    const highTopic = extractTopic(
-      [...input.ratings].sort((a, b) => b.rating - a.rating)[0]?.questionText || ''
-    );
-    const lowTopic = extractTopic(
-      [...input.ratings].sort((a, b) => a.rating - b.rating)[0]?.questionText || ''
-    );
-    const highRating = [...input.ratings].sort((a, b) => b.rating - a.rating)[0]?.rating || 0;
-    const lowRating = [...input.ratings].sort((a, b) => a.rating - b.rating)[0]?.rating || 0;
+    const { highTopic, lowTopic, highRating, lowRating } = extractTopicsFromAnswers(input.answers);
     const sameTopic = highTopic === lowTopic;
     const businessName = input.businessName;
     const commentPart = input.comment ? ` ${input.comment}` : '';

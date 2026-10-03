@@ -97,67 +97,67 @@ export class TemplateService implements IAIService {
     let professional = '';
     if (avgRating >= 4) {
       professional = pick([
-        `Didn't know what to expect going in, but I'm really glad I went.`,
-        `This was just what I needed — everything was done right.`,
-        `Really happy with how my visit went here.`,
+        `Came in not knowing what to expect, and walked out genuinely impressed.`,
+        `This visit turned out to be exactly what I needed — everything felt intentional and well thought out.`,
+        `From the moment I arrived, the whole experience felt seamless and thoughtfully put together.`,
       ]);
       if (highRating >= 4) {
         professional += ' ' + pick([
-          `The ${effectiveHighTopic} stood out the most — ${highRating === 5 ? 'honestly one of the best I\'ve come across' : 'definitely better than what I\'m used to'}.`,
-          `I was especially happy with the ${effectiveHighTopic} — ${highRating === 5 ? 'they clearly know what they\'re doing' : 'you can tell they care about it'}.`,
-          `The ${effectiveHighTopic} ${highRating === 5 ? 'alone would make me come back' : 'was done with real care'}.`,
+          `The ${effectiveHighTopic} really stood out — ${highRating === 5 ? 'it left a lasting impression on me' : 'noticeably above what I\'m used to'}.`,
+          `Particularly impressed by the ${effectiveHighTopic} — ${highRating === 5 ? 'the attention to detail was remarkable' : 'clearly a strong point here'}.`,
+          `The ${effectiveHighTopic} was ${highRating === 5 ? 'the kind of thing that makes you want to come back' : 'handled with real care and precision'}.`,
         ]);
       }
       if (!sameTopic && lowRating <= 3) {
         professional += ' ' + pick([
-          `The ${effectiveLowTopic} could be a bit better, but it didn't ruin anything.`,
-          `Small thing — the ${effectiveLowTopic} wasn't quite there yet.`,
-          `Only thing I'd mention is the ${effectiveLowTopic} could use some work.`,
+          `The ${effectiveLowTopic} has some room to grow, but nothing that overshadowed the rest.`,
+          `Minor note: the ${effectiveLowTopic} could use a bit more attention.`,
+          `Only area that didn't quite match the rest was the ${effectiveLowTopic}.`,
         ]);
       }
     } else if (avgRating >= 3) {
       professional = pick([
-        `It was a bit hit or miss — some things were on point, others not so much.`,
-        `Had a mixed time here — parts of it were fine, other parts less so.`,
-        `Some things worked, some didn't. It was okay overall.`,
+        `My experience here was a bit of a mixed bag — some things clicked, others didn't.`,
+        `It was decent overall, but felt inconsistent across different aspects.`,
+        `Some parts of the visit were spot-on, while others fell a bit flat.`,
       ]);
       if (highRating >= 4) {
         professional += ' ' + pick([
-          `The ${effectiveHighTopic} was the best part by far.`,
-          `I did like the ${effectiveHighTopic} — that part was done well.`,
+          `The ${effectiveHighTopic} was a definite highlight that showed real promise.`,
+          `On the bright side, the ${effectiveHighTopic} was handled with care.`,
         ]);
       }
       if (!sameTopic && lowRating <= 2) {
         professional += ' ' + pick([
-          `But the ${effectiveLowTopic} really needs some work.`,
-          `The ${effectiveLowTopic} was a letdown and brought the whole thing down.`,
+          `Unfortunately, the ${effectiveLowTopic} fell short and needs genuine attention.`,
+          `The ${effectiveLowTopic} was disappointing and dragged the experience down.`,
         ]);
       }
       professional += ' ' + pick([
-        `Could be a lot better if they fix a few things.`,
-        `There's something here, they just need to iron out the rough spots.`,
+        `There's real potential here if the weak spots get addressed.`,
+        `Some areas need work, but I can see what they're trying to build.`,
       ]);
     } else {
       professional = pick([
-        `Left pretty disappointed — it just wasn't what I was hoping for.`,
-        `This one didn't work out for me, unfortunately.`,
-        `Not the experience I expected — a few things went wrong.`,
+        `Left feeling underwhelmed — the experience didn't come together the way I'd hoped.`,
+        `Unfortunately, this visit didn't meet the bar I was expecting.`,
+        `A disappointing visit overall — several things missed the mark.`,
       ]);
       if (lowRating <= 2) {
         professional += ' ' + pick([
-          `The ${effectiveLowTopic} was the biggest issue for me.`,
-          `The ${effectiveLowTopic} really brought the whole thing down.`,
+          `The ${effectiveLowTopic} was particularly lacking and needs serious improvement.`,
+          `The ${effectiveLowTopic} really let the whole experience down.`,
         ]);
       }
       if (!sameTopic && highRating >= 3) {
         professional += ' ' + pick([
-          `The ${effectiveHighTopic} was okay, but not enough to make up for the rest.`,
-          `At least the ${effectiveHighTopic} was alright.`,
+          `The ${effectiveHighTopic} was passable, but not enough to save the visit.`,
+          `At least the ${effectiveHighTopic} was acceptable.`,
         ]);
       }
       professional += ' ' + pick([
-        `They'd need to fix some things before I'd try again.`,
-        `Hard to see myself going back unless things change.`,
+        `Would need to see real improvements before giving it another chance.`,
+        `Hard to justify a return visit in its current state.`,
       ]);
     }
     if (commentPart) professional += commentPart;
@@ -166,64 +166,64 @@ export class TemplateService implements IAIService {
     let friendly = '';
     if (avgRating >= 4) {
       friendly = pick([
-        `So glad I came here — it really made my day!`,
-        `Had such a nice time! Everything just clicked.`,
-        `Walked in not sure what to expect and left really happy.`,
+        `So happy I decided to come here — what a treat!`,
+        `This was such a refreshing experience, honestly made my day!`,
+        `Walked in curious and left with a smile — that says it all.`,
       ]);
       if (highRating >= 4) {
         friendly += ' ' + pick([
-          `The ${effectiveHighTopic} was my favourite part — ${highRating === 5 ? 'seriously so so impressed!' : 'they really nailed it.'}`,
-          `Loved the ${effectiveHighTopic} — ${highRating === 5 ? 'it was that thing you keep thinking about later!' : 'you could tell they put effort into it.'}`,
+          `The ${effectiveHighTopic} just hit different — ${highRating === 5 ? 'seriously one of the best I\'ve encountered!' : 'really well done and it showed.'}`,
+          `The ${effectiveHighTopic} blew me away — ${highRating === 5 ? 'couldn\'t stop thinking about it afterwards!' : 'clearly they put their heart into it.'}`,
         ]);
       }
       if (!sameTopic && lowRating <= 3) {
         friendly += ' ' + pick([
-          `The ${effectiveLowTopic} could be a tiny bit better, but honestly no big deal.`,
-          `Only small thing — the ${effectiveLowTopic} wasn't quite as strong, but whatever.`,
+          `The ${effectiveLowTopic} could be a little better, but honestly it's a minor thing in the big picture.`,
+          `Only tiny thing — the ${effectiveLowTopic} didn't quite match the rest, but no dealbreaker.`,
         ]);
       }
       friendly += ' ' + pick([
-        `Would totally go back!`,
+        `Already planning my next visit!`,
         `Can't wait to come back!`,
-        `Already told my friends about it!`,
+        `Definitely telling my friends about this place!`,
       ]);
     } else if (avgRating >= 3) {
       friendly = pick([
-        `Went the other day — it was fine, nothing crazy.`,
-        `Tried this place out recently — had mixed feelings about it.`,
-        `It was alright! Some things I liked, some not so much.`,
+        `Stopped by recently — it was alright, had its moments!`,
+        `Checked this place out the other day — mixed feelings.`,
+        `Gave it a try recently and came away with mixed thoughts.`,
       ]);
       if (highRating >= 4) {
         friendly += ' ' + pick([
-          `The ${effectiveHighTopic} was a nice surprise though.`,
-          `I did like the ${effectiveHighTopic} — that was the highlight for me!`,
+          `The ${effectiveHighTopic} was a nice surprise.`,
+          `Did really enjoy the ${effectiveHighTopic} at least!`,
         ]);
       }
       if (!sameTopic && lowRating <= 2) {
         friendly += ' ' + pick([
-          `Wasn't happy with the ${effectiveLowTopic} though.`,
-          `The ${effectiveLowTopic} kinda let it down.`,
+          `Wasn't too thrilled about the ${effectiveLowTopic} though.`,
+          `The ${effectiveLowTopic} could use some love and attention.`,
         ]);
       }
       friendly += ' ' + pick([
-        `Might try again sometime and see if it's better.`,
-        `Not bad but not rushing back either.`,
+        `Not bad, not mind-blowing — might give it another shot sometime.`,
+        `Decent enough, curious to see if things improve.`,
       ]);
     } else {
       friendly = pick([
-        `Ugh, this one was a miss for me.`,
-        `Not gonna lie, I was pretty disappointed.`,
-        `Wish it went better — just wasn't my experience.`,
+        `Had a tough experience here — wish it went differently.`,
+        `Not gonna lie, this visit was a bit of a letdown.`,
+        `Wish I had a better time here — it just didn't click.`,
       ]);
       if (lowRating <= 2) {
         friendly += ' ' + pick([
-          `The ${effectiveLowTopic} was the main thing that bugged me.`,
-          `The ${effectiveLowTopic} just wasn't it.`,
+          `The ${effectiveLowTopic} really didn't do it for me.`,
+          `The ${effectiveLowTopic} was a real letdown honestly.`,
         ]);
       }
       friendly += ' ' + pick([
-        `Hope they sort things out — would love a reason to try again.`,
-        `Maybe they'll improve, fingers crossed.`,
+        `Hope they work on things — I'd love a reason to come back.`,
+        `Hoping things improve because the concept has potential.`,
       ]);
     }
     if (commentPart) friendly += commentPart;
@@ -232,67 +232,67 @@ export class TemplateService implements IAIService {
     let heartfelt = '';
     if (avgRating >= 4) {
       heartfelt = pick([
-        `You can really tell the people here care about what they do — and that means a lot.`,
-        `I don't write reviews often, but this one felt worth sharing.`,
-        `Sometimes you go somewhere and it just stays with you — this was one of those times.`,
+        `There's something special about a place that genuinely cares — and you can feel it here.`,
+        `I don't usually write reviews, but this experience moved me enough to share.`,
+        `Sometimes you visit somewhere and it just stays with you — this was one of those times.`,
       ]);
       if (highRating >= 4) {
         heartfelt += ' ' + pick([
-          `The ${effectiveHighTopic} really touched me — ${highRating === 5 ? 'you just don\'t see that level of care very often' : 'it clearly matters to them and you can feel it'}.`,
-          `What I keep thinking about is the ${effectiveHighTopic} — ${highRating === 5 ? 'someone here really puts their heart into it' : 'there was a warmth to it that I appreciated'}.`,
+          `The ${effectiveHighTopic} felt like it was crafted with real intention — ${highRating === 5 ? 'the kind of care you rarely find anymore' : 'it clearly matters to them, and it showed'}.`,
+          `What struck me most was the ${effectiveHighTopic} — ${highRating === 5 ? 'you could tell someone poured their heart into getting it right' : 'there was a thoughtfulness to it that I appreciated'}.`,
         ]);
       }
       if (!sameTopic && lowRating <= 3) {
         heartfelt += ' ' + pick([
-          `If the ${effectiveLowTopic} gets the same love, this place will be something really special.`,
-          `Only thing I'd say is the ${effectiveLowTopic} didn't quite match, but it's a small thing.`,
+          `If the ${effectiveLowTopic} catches up to the rest, this place will be truly special.`,
+          `The only thing holding it back slightly is the ${effectiveLowTopic}, but it's a small note in an otherwise meaningful experience.`,
         ]);
       }
       heartfelt += ' ' + pick([
-        `Really glad I found this place.`,
-        `This is the kind of place that makes you feel looked after.`,
+        `Grateful I found this place — it's the kind of experience that restores your faith.`,
+        `This is the kind of place that reminds you why personal touches matter.`,
       ]);
     } else if (avgRating >= 3) {
       heartfelt = pick([
-        `I wanted to love this place more than I did — you can see they're trying.`,
-        `There's something here, I could feel it, but it wasn't all the way there yet.`,
+        `I wanted to love this place more than I did — there are glimpses of something really special here.`,
+        `There's potential here that's hard to ignore, even if the execution was uneven.`,
       ]);
       if (highRating >= 4) {
         heartfelt += ' ' + pick([
-          `The ${effectiveHighTopic} really showed me what they're capable of.`,
-          `When the ${effectiveHighTopic} was on, I could see exactly what this place could be.`,
+          `The ${effectiveHighTopic} genuinely impressed me and shows what they're capable of.`,
+          `When the ${effectiveHighTopic} was on point, I could see the vision clearly.`,
         ]);
       }
       if (!sameTopic && lowRating <= 2) {
         heartfelt += ' ' + pick([
-          `But the ${effectiveLowTopic} let me down — it felt like it was forgotten about.`,
-          `The ${effectiveLowTopic} felt off compared to everything else.`,
+          `But the ${effectiveLowTopic} was honestly disheartening — it felt like an afterthought.`,
+          `The ${effectiveLowTopic} let me down and felt disconnected from the care shown elsewhere.`,
         ]);
       }
       heartfelt += ' ' + pick([
-        `I'm cheering for them — they just need to bring it all together.`,
-        `With a little more effort, this could be really something.`,
+        `I'm rooting for them to bring it all together — the foundation is there.`,
+        `With some refinement, this could become something truly memorable.`,
       ]);
     } else {
       heartfelt = pick([
-        `I had my hopes up, which made it hurt more when it didn't pan out.`,
-        `This is hard to write because I could see what they were going for — it just missed.`,
+        `I had high hopes coming in, which made the disappointment hit harder.`,
+        `It's hard to write this because I could see what they were going for — but the execution fell short.`,
       ]);
       if (lowRating <= 2) {
         heartfelt += ' ' + pick([
-          `The ${effectiveLowTopic} was the part that bothered me most — it felt overlooked.`,
-          `The ${effectiveLowTopic} needed more care than it got.`,
+          `The ${effectiveLowTopic} was where it hurt most — it felt neglected.`,
+          `The ${effectiveLowTopic} especially felt like it hadn't been given the care it deserved.`,
         ]);
       }
       if (!sameTopic && highRating >= 3) {
         heartfelt += ' ' + pick([
-          `The ${effectiveHighTopic} showed a glimpse of what's possible, which almost makes it harder.`,
-          `At least the ${effectiveHighTopic} gave me a little hope.`,
+          `The ${effectiveHighTopic} gave me a glimpse of what could be, which almost makes it more frustrating.`,
+          `At least the ${effectiveHighTopic} showed some promise.`,
         ]);
       }
       heartfelt += ' ' + pick([
-        `I really hope they listen to feedback — there's a better version of this place in there.`,
-        `With the right changes, this could be the place it wants to be.`,
+        `I genuinely hope they take feedback to heart — there's a better version of this place waiting to emerge.`,
+        `With the right attention, this could become the place it's clearly trying to be.`,
       ]);
     }
     if (commentPart) heartfelt += commentPart;

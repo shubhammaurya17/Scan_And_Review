@@ -6,7 +6,6 @@ interface GeminiResponse {
     content: {
       parts: Array<{ text: string }>;
     };
-    finishReason?: string;
   }>;
 }
 
@@ -56,42 +55,52 @@ export class GeminiService implements IAIService {
       ? '\nNOTE: The customer provided only star ratings with no specific details. Write brief, honest reviews. Do NOT invent any specifics. Keep each draft to 1-2 sentences.'
       : '';
 
-    const prompt = `You are helping a real customer write a Google review for a ${input.categoryName} they visited. Write it like a normal person would — casual, honest, relatable.
+    const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
 
 CUSTOMER FEEDBACK:
 ${feedbackBlock}
 
 Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
 
-RULES:
-- Use ONLY the facts above. Do NOT make up details.
-- Do NOT mention the business name.
-- Sound like a real person, not a bot or marketer. Use simple everyday words.
-- Include the customer's selected insights naturally in the review text.
-- Preserve the actual sentiment — if it was mixed, say so.
+INSTRUCTIONS:
+- Write the review ONLY from the facts provided above. Use the customer's selected options and their own words.
+- Do NOT invent details: no staff names, no specific dishes/products/treatments, no prices, no outcomes the customer didn't mention.
+- Do NOT add generic praise to fill space. Do NOT use marketing language.
+- Do NOT automatically include a recommendation phrase like "highly recommend".
+- NEVER include the business name anywhere in the review.
+- NEVER use generic filler words like "good", "great", "excellent", "solid", "amazing", "wonderful", "fantastic" — instead describe WHAT specifically happened and WHY it mattered.
+- Explain WHAT was good or bad in concrete terms rather than labeling it with an adjective.
+- Write like a thoughtful person explaining their experience to a friend — specific, descriptive, with personality.
+- The review should sound like a real customer describing what happened, not an advertisement or a template.
+- Preserve the customer's actual sentiment — do not upgrade mixed/negative feedback.
 ${sparseNote}
 
-Write exactly 3 different drafts, each 50-90 words:
+Write exactly 3 drafts:
 
-DRAFT 1 — Straightforward: Just say what happened and what stood out.
-DRAFT 2 — Casual & warm: Same facts, friendlier tone, show how it felt.
-DRAFT 3 — Personal & sincere: Share why the experience mattered.
+DRAFT 1 — Balanced & Authentic (50-90 words):
+A thoughtful first-person review that walks through the experience. Mention 1-3 concrete details from the feedback and explain WHY they stood out. Use descriptive language that paints a picture instead of generic adjectives.
 
-Format EXACTLY like this (use these exact markers):
+DRAFT 2 — Warm & Natural (50-80 words):
+Conversational and emotionally genuine. Share how the experience made the customer feel. Still grounded in the same facts but told with warmth and personality. Different sentence structure and opening from Draft 1.
+
+DRAFT 3 — Heartfelt & Personal (50-90 words):
+A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression and why. Thoughtful and sincere — reads like someone who genuinely cares about sharing their honest experience.
+
+CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts.
+
+Format EXACTLY:
 ---STYLE1---
-[draft 1 text here]
+[text]
 ---STYLE2---
-[draft 2 text here]
+[text]
 ---STYLE3---
-[draft 3 text here]`;
+[text]`;
 
     try {
-      const content = await this.generate(prompt, 1.0, 1000);
-      console.log('📝 Gemini raw response length:', content.length);
-      console.log('📝 Gemini raw response (first 500 chars):', content.substring(0, 500));
+      const content = await this.generate(prompt, 1.1, 700);
       const drafts = this.parseDrafts(content);
       if (drafts.length >= 2) return drafts;
-      console.warn(`⚠️ Gemini combined prompt parsed only ${drafts.length} drafts, falling back to individual calls`);
+      // Gemini often hits MAX_TOKENS and returns only 1 draft — fall back
       return this.generateDraftsIndividually(input);
     } catch (err) {
       console.error('Gemini draft generation failed, trying individual calls:', err);
@@ -141,51 +150,30 @@ Format EXACTLY like this (use these exact markers):
 
   private parseDrafts(content: string): GeneratedDraft[] {
     const drafts: GeneratedDraft[] = [];
-    const styles: Array<GeneratedDraft['style']> = ['PROFESSIONAL', 'FRIENDLY', 'HEARTFELT'];
+    const styleMap: Array<{ marker: string; style: GeneratedDraft['style'] }> = [
+      { marker: '---STYLE1---', style: 'PROFESSIONAL' },
+      { marker: '---STYLE2---', style: 'FRIENDLY' },
+      { marker: '---STYLE3---', style: 'HEARTFELT' },
+    ];
 
-    // Strategy 1: Exact ---STYLE1--- markers
-    const markers = ['---STYLE1---', '---STYLE2---', '---STYLE3---'];
-    if (markers.some(m => content.includes(m))) {
-      for (let i = 0; i < markers.length; i++) {
-        const startIdx = content.indexOf(markers[i]);
-        if (startIdx === -1) continue;
+    for (let i = 0; i < styleMap.length; i++) {
+      const { marker, style } = styleMap[i];
+      const nextMarker = styleMap[i + 1]?.marker;
+      const startIdx = content.indexOf(marker);
+      if (startIdx === -1) continue;
 
-        const textStart = startIdx + markers[i].length;
-        // Find next marker, or use end of content
-        let textEnd = content.length;
-        for (let j = i + 1; j < markers.length; j++) {
-          const nextIdx = content.indexOf(markers[j]);
-          if (nextIdx !== -1) { textEnd = nextIdx; break; }
-        }
+      const textStart = startIdx + marker.length;
+      let textEnd = nextMarker ? content.indexOf(nextMarker) : content.length;
+      if (textEnd === -1) textEnd = content.length; // next marker not found, take rest
 
-        let text = content.slice(textStart, textEnd).trim();
-        text = text.replace(/^["']|["']$/g, '');
-        text = text.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
-        if (text.length > 10) {
-          drafts.push({ style: styles[i], content: text });
-        }
+      let text = content.slice(textStart, textEnd).trim();
+      // Clean up any accidental quotes or prefixes
+      text = text.replace(/^["']|["']$/g, '');
+      text = text.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
+
+      if (text.length > 10) {
+        drafts.push({ style, content: text });
       }
-      if (drafts.length > 0) return drafts;
-    }
-
-    // Strategy 2: "Draft 1" / "Draft 2" / "Draft 3" headers
-    const draftSplit = content.split(/\*{0,2}Draft\s*\d[^:\n]*:?\s*\*{0,2}\s*\n?/i).filter(s => s.trim().length > 10);
-    if (draftSplit.length >= 2) {
-      for (let i = 0; i < Math.min(draftSplit.length, 3); i++) {
-        let text = draftSplit[i].trim().replace(/^["']|["']$/g, '');
-        drafts.push({ style: styles[i], content: text });
-      }
-      return drafts;
-    }
-
-    // Strategy 3: Numbered list "1." / "2." / "3."
-    const numberedSplit = content.split(/\n\s*\d+[\.\)]\s+/).filter(s => s.trim().length > 10);
-    if (numberedSplit.length >= 2) {
-      for (let i = 0; i < Math.min(numberedSplit.length, 3); i++) {
-        let text = numberedSplit[i].trim().replace(/^["']|["']$/g, '');
-        drafts.push({ style: styles[i], content: text });
-      }
-      return drafts;
     }
 
     return drafts;
@@ -208,23 +196,23 @@ Format EXACTLY like this (use these exact markers):
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a straightforward Google review in 50-90 words. Just say what happened and what stood out. Keep it honest and simple.${sparseNote}`,
+        instruction: `Write a balanced, authentic Google review in 50-90 words. A thoughtful first-person review that walks through the experience mentioning 1-3 concrete details from the feedback. Explain WHY things stood out using descriptive language instead of generic adjectives.${sparseNote}`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a casual, warm Google review in 50-80 words. Show how the visit made you feel. Friendly and relaxed tone.${sparseNote}`,
+        instruction: `Write a warm, natural Google review in 50-80 words. Conversational and emotionally genuine. Share how the experience made the customer feel. Grounded in the same customer facts but told with warmth and personality. Different sentence structure and opening.${sparseNote}`,
       },
       {
         style: 'HEARTFELT' as const,
-        instruction: `Write a sincere, personal Google review in 50-90 words. Share why this experience mattered. Genuine and from the heart.${sparseNote}`,
+        instruction: `Write a heartfelt, personal Google review in 50-90 words. A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression and why. Thoughtful and sincere.${sparseNote}`,
       },
     ];
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are a real customer writing a Google review for a ${input.categoryName} you visited. Write like a normal person — casual, honest, relatable.
+        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
 
-WHAT HAPPENED:
+CUSTOMER FEEDBACK:
 ${feedbackBlock}
 
 Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
@@ -232,15 +220,18 @@ Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
 ${instruction}
 
 RULES:
-- Write in first person. Use ONLY the facts above — do NOT make up details.
-- Do NOT mention the business name.
-- Include the customer's highlighted insights naturally.
-- Sound like a real person, not a bot. Use simple everyday words.
-- Output ONLY the review text, nothing else.`;
+- Write in first person as the customer
+- Write ONLY from the facts provided above — do NOT invent details
+- NEVER include the business name in the review
+- NEVER use generic words like "good", "great", "excellent", "solid", "amazing", "wonderful" — describe WHAT happened and WHY it mattered instead
+- Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
+- Write like a real person telling a friend about their experience — specific and descriptive
+- Preserve the customer's actual sentiment
+- Do NOT start with the business name
+- Output ONLY the review text, nothing else`;
 
         try {
-          const content = await this.generate(prompt, 1.0, 400);
-          console.log(`📝 Gemini individual ${style} response (${content.length} chars):`, content.substring(0, 200));
+          const content = await this.generate(prompt, 1.2, 250);
           let cleaned = content.trim();
           cleaned = cleaned.replace(/^["']|["']$/g, '');
           cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
@@ -362,16 +353,8 @@ Topics:`;
       }
 
       const data = (await res.json()) as GeminiResponse;
-      const candidate = data.candidates?.[0];
-      if (!candidate?.content?.parts?.length) throw new Error('Empty response from Gemini');
-
-      // Concatenate ALL parts — Gemini may split long responses across multiple parts
-      const text = candidate.content.parts.map(p => p.text).join('');
-      const finishReason = candidate.finishReason;
-      if (finishReason && finishReason !== 'STOP') {
-        console.warn(`⚠️ Gemini finishReason: ${finishReason} (requested ${maxTokens} tokens)`);
-      }
-      if (!text) throw new Error('Empty text from Gemini');
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('Empty response from Gemini');
       return text;
     } catch (err) {
       clearTimeout(timeout);

@@ -24,9 +24,9 @@ export class OllamaService implements IAIService {
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
     const styles = [
-      { style: 'PROFESSIONAL' as const, instruction: 'Write a balanced and authentic review in 50-90 words. Walk through the experience mentioning what specifically stood out and why. Use descriptive language instead of generic adjectives like good/great/excellent.' },
-      { style: 'FRIENDLY' as const, instruction: 'Write a warm and natural review in 50-80 words. Conversational and emotionally genuine. Share how the experience made you feel. Show genuine personality for positives and honest feedback about any negatives.' },
-      { style: 'HEARTFELT' as const, instruction: 'Write a heartfelt and personal review in 50-90 words. A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression. Thoughtful and sincere.' },
+      { style: 'PROFESSIONAL' as const, instruction: 'Write a simple, honest review in 50-90 words. Just say what happened, what you liked, what could be better. Keep it straightforward like telling a friend.' },
+      { style: 'FRIENDLY' as const, instruction: 'Write a warm, casual review in 50-80 words. Show how it made you feel. Use everyday language, contractions, short sentences.' },
+      { style: 'HEARTFELT' as const, instruction: 'Write a sincere, personal review in 50-90 words. Share why this experience mattered to you. Be genuine — like you\'re writing to help others find the right place.' },
     ];
 
     const feedbackBlock = this.formatFeedbackBlock(input);
@@ -37,7 +37,7 @@ export class OllamaService implements IAIService {
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
+        const prompt = `You are helping a customer write a simple, everyday Google review for a ${input.categoryName} they visited.
 
 CUSTOMER FEEDBACK:
 ${feedbackBlock}
@@ -51,11 +51,10 @@ IMPORTANT RULES:
 - Write from the customer's perspective (first person)
 - Write ONLY from the facts provided above — do NOT invent details
 - NEVER include the business name in the review
-- NEVER use generic words like "good", "great", "excellent", "solid", "amazing" — describe WHAT happened and WHY it mattered
-- Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
+- NEVER use words like "good", "great", "excellent", "solid", "amazing", "wonderful", "impressive", "outstanding"
+- Do NOT use phrases like "hidden gem", "exceeded expectations", "highly recommend", "attention to detail"
+- Use simple everyday language — like texting a friend. No fancy words.
 - If ratings are low, reflect that honestly — do not turn negatives into positives
-- Write like a real person telling a friend about their experience
-- Keep it natural and authentic
 
 Write only the review text, nothing else:`;
 

@@ -269,8 +269,8 @@ export class ReviewService {
 
     try {
       drafts = await aiService.generateReviewDrafts(draftInput);
-      // Filter out any drafts with empty content
-      drafts = drafts.filter(d => d.content && d.content.trim().length > 0);
+      // Filter out any drafts with empty or truncated content (< 100 chars is likely cut off)
+      drafts = drafts.filter(d => d.content && d.content.trim().length >= 100);
       console.log(`✅ ${serviceName} returned ${drafts.length} valid drafts`);
     } catch (err) {
       console.error(`❌ ${serviceName} threw during draft generation:`, err);
@@ -296,7 +296,7 @@ export class ReviewService {
     if (failedDrafts.length > 0 && drafts.length > 0) {
       try {
         const retryDrafts = await aiService.generateReviewDrafts(draftInput);
-        const retryFiltered = retryDrafts.filter(d => d.content && d.content.trim().length > 0);
+        const retryFiltered = retryDrafts.filter(d => d.content && d.content.trim().length >= 100);
         for (const failed of failedDrafts) {
           const retry = retryFiltered.find(r => r.style === failed.style);
           if (retry) {

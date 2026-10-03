@@ -1,12 +1,27 @@
 import { IAIService, ReviewDraftInput, GeneratedDraft, SentimentResult, CustomerAnswer } from './ai.service';
 import { config } from '../config/env';
 
-interface GeminiResponse {
+interface GeminiGenerateContentResponse {
   candidates: Array<{
     content: {
       parts: Array<{ text: string }>;
     };
   }>;
+}
+
+interface InteractionsResponse {
+  id: string;
+  model: string;
+  status: string;
+  steps: Array<{
+    type: string;
+    content: Array<{ type: string; text: string }>;
+  }>;
+  usage?: {
+    total_input_tokens: number;
+    total_output_tokens: number;
+    total_tokens: number;
+  };
 }
 
 export class GeminiService implements IAIService {
@@ -18,7 +33,7 @@ export class GeminiService implements IAIService {
     this.apiKey = config.GEMINI_API_KEY || '';
     // Only use AI_MODEL if it's actually a Gemini model; otherwise use default
     const configModel = config.AI_MODEL;
-    this.model = configModel && configModel.startsWith('gemini') ? configModel : 'gemini-2.5-flash';
+    this.model = configModel && configModel.startsWith('gemini') ? configModel : 'gemini-3.8-flash';
     console.log(`🔧 GeminiService initialized with model: ${this.model}`);
   }
 
@@ -312,6 +327,73 @@ Topics:`;
   }
 
   private async generate(prompt: string, temperature: number, maxTokens: number): Promise<string> {
+    // Try the Interactions API first (recommended for gemini-3.8-flash+)
+    try {
+      return await this.generateViaInteractions(prompt, temperature, maxTokens);
+    } catch (interactionsErr) {
+      console.warn('Interactions API failed, falling back to generateContent:', (interactionsErr as Error).message);
+      return this.generateViaContent(prompt, temperature, maxTokens);
+    }
+  }
+
+  private async generateViaInteractions(prompt: string, temperature: number, maxTokens: number): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const res = await fetch(
+        `${this.baseUrl}/interactions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': this.apiKey,
+          },
+          body: JSON.stringify({
+            model: this.model,
+            input: prompt,
+            generation_config: {
+              temperature,
+              max_output_tokens: maxTokens,
+            },
+          }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => 'no body');
+        console.error(`Interactions API error ${res.status}: ${errorBody}`);
+        throw new Error(`Interactions API error: ${res.status}`);
+      }
+
+      const data = (await res.json()) as InteractionsResponse;
+
+      // Extract text from steps
+      let text = '';
+      for (const step of data.steps || []) {
+        if (step.type === 'model_output' && step.content) {
+          for (const part of step.content) {
+            if (part.type === 'text' && part.text) {
+              text += part.text;
+            }
+          }
+        }
+      }
+
+      if (!text) throw new Error('Empty response from Interactions API');
+
+      console.log(`✅ Interactions API response: ${data.usage?.total_output_tokens || '?'} output tokens, ${text.length} chars`);
+      return text;
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
+    }
+  }
+
+  private async generateViaContent(prompt: string, temperature: number, maxTokens: number): Promise<string> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -331,7 +413,6 @@ Topics:`;
               temperature,
               maxOutputTokens: maxTokens,
               topP: 0.95,
-              topK: 40,
             },
             safetySettings: [
               { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -348,12 +429,16 @@ Topics:`;
 
       if (!res.ok) {
         const errorBody = await res.text().catch(() => 'no body');
-        console.error(`Gemini API error ${res.status}: ${errorBody}`);
+        console.error(`Gemini generateContent error ${res.status}: ${errorBody}`);
         throw new Error(`Gemini API error: ${res.status}`);
       }
 
-      const data = (await res.json()) as GeminiResponse;
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const data = (await res.json()) as GeminiGenerateContentResponse;
+      // Concatenate all parts in case of multi-part response
+      const text = data.candidates?.[0]?.content?.parts
+        ?.map(p => p.text)
+        .filter(Boolean)
+        .join('') || '';
       if (!text) throw new Error('Empty response from Gemini');
       return text;
     } catch (err) {

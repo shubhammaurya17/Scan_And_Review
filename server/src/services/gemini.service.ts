@@ -377,7 +377,7 @@ Topics:`;
             generation_config: {
               temperature,
               max_output_tokens: maxTokens,
-              thinking_level: 'none',
+              thinking_level: 'minimal',
             },
           }),
           signal: controller.signal,

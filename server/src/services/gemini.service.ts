@@ -70,7 +70,7 @@ export class GeminiService implements IAIService {
     this.apiKey = config.GEMINI_API_KEY || '';
     // Only use AI_MODEL if it's actually a Gemini model; otherwise use default
     const configModel = config.AI_MODEL;
-    this.model = configModel && configModel.startsWith('gemini') ? configModel : 'gemini-3.5-flash';
+    this.model = configModel && configModel.startsWith('gemini') ? configModel : 'gemini-3.5-flash-lite';
     console.log(`🔧 GeminiService initialized with model: ${this.model}`);
   }
 
@@ -131,16 +131,16 @@ ${sparseNote}
 
 Write exactly 3 drafts:
 
-DRAFT 1 — Balanced & Authentic (50-90 words):
-A thoughtful first-person review that walks through the experience. Mention 1-3 concrete details from the feedback and explain WHY they stood out. Use descriptive language that paints a picture instead of generic adjectives.
+DRAFT 1 — Balanced & Authentic (35-60 words):
+A thoughtful first-person review that walks through the experience. Mention 1-2 concrete details from the feedback and explain WHY they stood out. Keep it concise — real reviewers don't write essays.
 
-DRAFT 2 — Warm & Natural (50-80 words):
-Conversational and emotionally genuine. Share how the experience made the customer feel. Still grounded in the same facts but told with warmth and personality. Different sentence structure and opening from Draft 1.
+DRAFT 2 — Warm & Natural (35-55 words):
+Conversational and emotionally genuine. Share how the experience made the customer feel. Still grounded in the same facts but told with warmth. Different sentence structure and opening from Draft 1.
 
-DRAFT 3 — Heartfelt & Personal (50-90 words):
-A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression and why. Thoughtful and sincere — reads like someone who genuinely cares about sharing their honest experience.
+DRAFT 3 — Heartfelt & Personal (35-60 words):
+A personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression. Thoughtful and sincere — reads like someone sharing an honest experience.
 
-CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts.
+CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts. Keep each draft SHORT and punchy — like a real Google review, not a blog post.
 
 Format EXACTLY:
 ---STYLE1---
@@ -151,7 +151,7 @@ Format EXACTLY:
 [text]`;
 
     try {
-      const content = await this.generate(prompt, 1.1, 700);
+      const content = await this.generate(prompt, 1.1, 500);
       const drafts = this.parseDrafts(content);
       if (drafts.length >= 2) return drafts;
       // Gemini often hits MAX_TOKENS and returns only 1 draft — fall back
@@ -250,15 +250,15 @@ Format EXACTLY:
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a balanced, authentic Google review in 50-90 words. A thoughtful first-person review that walks through the experience mentioning 1-3 concrete details from the feedback. Explain WHY things stood out using descriptive language instead of generic adjectives.${sparseNote}`,
+        instruction: `Write a balanced, authentic Google review in 35-60 words. A thoughtful first-person review mentioning 1-2 concrete details from the feedback. Explain WHY things stood out — keep it concise like a real review, not an essay.${sparseNote}`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a warm, natural Google review in 50-80 words. Conversational and emotionally genuine. Share how the experience made the customer feel. Grounded in the same customer facts but told with warmth and personality. Different sentence structure and opening.${sparseNote}`,
+        instruction: `Write a warm, natural Google review in 35-55 words. Conversational and emotionally genuine. Share how the experience made the customer feel. Grounded in the same facts but told with warmth. Short and punchy.${sparseNote}`,
       },
       {
         style: 'HEARTFELT' as const,
-        instruction: `Write a heartfelt, personal Google review in 50-90 words. A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression and why. Thoughtful and sincere.${sparseNote}`,
+        instruction: `Write a heartfelt, personal Google review in 35-60 words. A personal, reflective review that connects the experience to why it mattered. Speak from the heart. Thoughtful and sincere — keep it brief.${sparseNote}`,
       },
     ];
 
@@ -287,7 +287,7 @@ RULES:
 - Output ONLY the review text, nothing else`;
 
         try {
-          const content = await this.generate(prompt, 1.2, 250);
+          const content = await this.generate(prompt, 1.2, 150);
           let cleaned = content.trim();
           cleaned = cleaned.replace(/^["']|["']$/g, '');
           cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');

@@ -6,6 +6,7 @@ interface GeminiResponse {
     content: {
       parts: Array<{ text: string }>;
     };
+    finishReason?: string;
   }>;
 }
 
@@ -140,71 +141,51 @@ Format EXACTLY like this (use these exact markers):
 
   private parseDrafts(content: string): GeneratedDraft[] {
     const drafts: GeneratedDraft[] = [];
+    const styles: Array<GeneratedDraft['style']> = ['PROFESSIONAL', 'FRIENDLY', 'HEARTFELT'];
 
-    // Try exact markers first
-    const styleMap: Array<{ marker: string; style: GeneratedDraft['style'] }> = [
-      { marker: '---STYLE1---', style: 'PROFESSIONAL' },
-      { marker: '---STYLE2---', style: 'FRIENDLY' },
-      { marker: '---STYLE3---', style: 'HEARTFELT' },
-    ];
-
-    // Check if exact markers exist; if not, try flexible regex patterns
-    const hasExactMarkers = styleMap.some(s => content.includes(s.marker));
-
-    if (hasExactMarkers) {
-      for (let i = 0; i < styleMap.length; i++) {
-        const { marker, style } = styleMap[i];
-        const nextMarker = styleMap[i + 1]?.marker;
-        const startIdx = content.indexOf(marker);
+    // Strategy 1: Exact ---STYLE1--- markers
+    const markers = ['---STYLE1---', '---STYLE2---', '---STYLE3---'];
+    if (markers.some(m => content.includes(m))) {
+      for (let i = 0; i < markers.length; i++) {
+        const startIdx = content.indexOf(markers[i]);
         if (startIdx === -1) continue;
 
-        const textStart = startIdx + marker.length;
-        const textEnd = nextMarker ? content.indexOf(nextMarker) : content.length;
-        if (textEnd === -1) continue;
+        const textStart = startIdx + markers[i].length;
+        // Find next marker, or use end of content
+        let textEnd = content.length;
+        for (let j = i + 1; j < markers.length; j++) {
+          const nextIdx = content.indexOf(markers[j]);
+          if (nextIdx !== -1) { textEnd = nextIdx; break; }
+        }
 
         let text = content.slice(textStart, textEnd).trim();
         text = text.replace(/^["']|["']$/g, '');
         text = text.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
-
         if (text.length > 10) {
-          drafts.push({ style, content: text });
+          drafts.push({ style: styles[i], content: text });
         }
       }
-    } else {
-      // Flexible parsing: try common patterns Gemini might use
-      // Patterns: "STYLE1:", "**STYLE1**", "Draft 1:", "**Draft 1**", "1.", "1)", etc.
-      const flexPatterns = [
-        /(?:\*{0,2})(?:---\s*)?STYLE\s*1(?:\s*---)?(?:\*{0,2})[:\s]*\n?([\s\S]*?)(?=(?:\*{0,2})(?:---\s*)?STYLE\s*2)/i,
-        /(?:\*{0,2})(?:---\s*)?STYLE\s*2(?:\s*---)?(?:\*{0,2})[:\s]*\n?([\s\S]*?)(?=(?:\*{0,2})(?:---\s*)?STYLE\s*3)/i,
-        /(?:\*{0,2})(?:---\s*)?STYLE\s*3(?:\s*---)?(?:\*{0,2})[:\s]*\n?([\s\S]*?)$/i,
-      ];
-      const flexStyles: Array<GeneratedDraft['style']> = ['PROFESSIONAL', 'FRIENDLY', 'HEARTFELT'];
+      if (drafts.length > 0) return drafts;
+    }
 
-      let matched = false;
-      for (let i = 0; i < flexPatterns.length; i++) {
-        const m = content.match(flexPatterns[i]);
-        if (m && m[1]?.trim().length > 10) {
-          let text = m[1].trim().replace(/^["']|["']$/g, '').replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
-          drafts.push({ style: flexStyles[i], content: text });
-          matched = true;
-        }
+    // Strategy 2: "Draft 1" / "Draft 2" / "Draft 3" headers
+    const draftSplit = content.split(/\*{0,2}Draft\s*\d[^:\n]*:?\s*\*{0,2}\s*\n?/i).filter(s => s.trim().length > 10);
+    if (draftSplit.length >= 2) {
+      for (let i = 0; i < Math.min(draftSplit.length, 3); i++) {
+        let text = draftSplit[i].trim().replace(/^["']|["']$/g, '');
+        drafts.push({ style: styles[i], content: text });
       }
+      return drafts;
+    }
 
-      // If still no match, try "Draft 1" / "Draft 2" / "Draft 3" pattern
-      if (!matched) {
-        const draftPatterns = [
-          /(?:\*{0,2})Draft\s*1[^:]*:?\s*(?:\*{0,2})\s*\n?([\s\S]*?)(?=(?:\*{0,2})Draft\s*2)/i,
-          /(?:\*{0,2})Draft\s*2[^:]*:?\s*(?:\*{0,2})\s*\n?([\s\S]*?)(?=(?:\*{0,2})Draft\s*3)/i,
-          /(?:\*{0,2})Draft\s*3[^:]*:?\s*(?:\*{0,2})\s*\n?([\s\S]*?)$/i,
-        ];
-        for (let i = 0; i < draftPatterns.length; i++) {
-          const m = content.match(draftPatterns[i]);
-          if (m && m[1]?.trim().length > 10) {
-            let text = m[1].trim().replace(/^["']|["']$/g, '').replace(/^(Review|Here'?s?|My review):?\s*/i, '');
-            drafts.push({ style: flexStyles[i], content: text });
-          }
-        }
+    // Strategy 3: Numbered list "1." / "2." / "3."
+    const numberedSplit = content.split(/\n\s*\d+[\.\)]\s+/).filter(s => s.trim().length > 10);
+    if (numberedSplit.length >= 2) {
+      for (let i = 0; i < Math.min(numberedSplit.length, 3); i++) {
+        let text = numberedSplit[i].trim().replace(/^["']|["']$/g, '');
+        drafts.push({ style: styles[i], content: text });
       }
+      return drafts;
     }
 
     return drafts;
@@ -381,8 +362,16 @@ Topics:`;
       }
 
       const data = (await res.json()) as GeminiResponse;
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error('Empty response from Gemini');
+      const candidate = data.candidates?.[0];
+      if (!candidate?.content?.parts?.length) throw new Error('Empty response from Gemini');
+
+      // Concatenate ALL parts — Gemini may split long responses across multiple parts
+      const text = candidate.content.parts.map(p => p.text).join('');
+      const finishReason = candidate.finishReason;
+      if (finishReason && finishReason !== 'STOP') {
+        console.warn(`⚠️ Gemini finishReason: ${finishReason} (requested ${maxTokens} tokens)`);
+      }
+      if (!text) throw new Error('Empty text from Gemini');
       return text;
     } catch (err) {
       clearTimeout(timeout);

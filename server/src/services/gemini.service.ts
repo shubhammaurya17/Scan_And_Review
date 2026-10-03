@@ -29,6 +29,43 @@ export class GeminiService implements IAIService {
   private model: string;
   private baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
+  // Random voice/perspective directives to ensure uniqueness across identical inputs
+  private readonly voiceDirectives = [
+    'Write as someone who notices small details others might miss.',
+    'Write as someone who values efficiency and getting straight to the point about what matters.',
+    'Write as someone who tends to compare experiences to past visits elsewhere.',
+    'Write as someone who focuses on how the atmosphere and environment made them feel.',
+    'Write as someone who pays close attention to how they were treated by staff.',
+    'Write as someone who weighs value for money in everything they do.',
+    'Write as someone who appreciates when things just work smoothly without hassle.',
+    'Write as someone who is usually skeptical but was genuinely surprised this time.',
+    'Write as someone who came in with specific expectations based on what they heard.',
+    'Write as someone reflective who connects experiences to their daily life.',
+    'Write as someone practical who focuses on whether they got what they came for.',
+    'Write as someone who rarely writes reviews but felt compelled to share this time.',
+    'Write as someone who notices the effort behind the scenes that most people overlook.',
+    'Write as someone who values consistency and reliability above all else.',
+    'Write as someone who focuses on the emotional impact of the experience.',
+  ];
+
+  private readonly openingStyles = [
+    'Start with what first caught your attention.',
+    'Start with how you felt walking in.',
+    'Start with the reason you decided to visit.',
+    'Start with the highlight of your experience.',
+    'Start mid-story, as if picking up a conversation.',
+    'Start with an honest admission or expectation you had.',
+    'Start with a specific moment that stood out.',
+    'Start with the overall vibe before diving into details.',
+  ];
+
+  private getRandomDirective(): string {
+    const voice = this.voiceDirectives[Math.floor(Math.random() * this.voiceDirectives.length)];
+    const opening = this.openingStyles[Math.floor(Math.random() * this.openingStyles.length)];
+    const seed = Math.random().toString(36).substring(2, 8);
+    return `\nUNIQUENESS DIRECTIVE (seed: ${seed}):\n- ${voice}\n- ${opening}\n- Use completely fresh vocabulary and sentence structures — never repeat phrasing from previous generations.`;
+  }
+
   constructor() {
     this.apiKey = config.GEMINI_API_KEY || '';
     // Only use AI_MODEL if it's actually a Gemini model; otherwise use default
@@ -71,6 +108,7 @@ export class GeminiService implements IAIService {
       : '';
 
     const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
+${this.getRandomDirective()}
 
 CUSTOMER FEEDBACK:
 ${feedbackBlock}
@@ -88,6 +126,7 @@ INSTRUCTIONS:
 - Write like a thoughtful person explaining their experience to a friend — specific, descriptive, with personality.
 - The review should sound like a real customer describing what happened, not an advertisement or a template.
 - Preserve the customer's actual sentiment — do not upgrade mixed/negative feedback.
+- Every draft must use DIFFERENT vocabulary, sentence structures, and openings — no two drafts should feel alike.
 ${sparseNote}
 
 Write exactly 3 drafts:
@@ -226,6 +265,7 @@ Format EXACTLY:
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
         const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
+${this.getRandomDirective()}
 
 CUSTOMER FEEDBACK:
 ${feedbackBlock}
@@ -243,6 +283,7 @@ RULES:
 - Write like a real person telling a friend about their experience — specific and descriptive
 - Preserve the customer's actual sentiment
 - Do NOT start with the business name
+- Use completely fresh vocabulary — never reuse phrasing from any other draft
 - Output ONLY the review text, nothing else`;
 
         try {

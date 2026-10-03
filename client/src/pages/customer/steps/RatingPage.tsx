@@ -155,14 +155,14 @@ export function RatingPage({ business, questions, responses, insights, selectedI
         <div className="mt-6">
           <h3 className="text-base font-semibold text-gray-900 mb-1">What stood out to you?</h3>
           <p className="text-xs text-gray-500 mb-3">Select at least one that matches your experience</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-wrap gap-2">
             {insights.map((insight) => {
               const isSelected = selectedInsights.includes(insight.id);
               return (
                 <button
                   key={insight.id}
                   onClick={() => onToggleInsight(insight.id)}
-                  className={`px-2 py-1.5 rounded-full text-xs border transition-all text-center truncate ${
+                  className={`px-3 py-1.5 rounded-full text-xs border transition-all whitespace-nowrap ${
                     isSelected
                       ? 'bg-primary-600 text-white border-primary-600'
                       : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'

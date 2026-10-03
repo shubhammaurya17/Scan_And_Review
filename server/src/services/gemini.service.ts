@@ -53,10 +53,10 @@ export class GeminiService implements IAIService {
     'Start with how you felt walking in.',
     'Start with the reason you decided to visit.',
     'Start with the highlight of your experience.',
-    'Start mid-story, as if picking up a conversation.',
     'Start with an honest admission or expectation you had.',
     'Start with a specific moment that stood out.',
     'Start with the overall vibe before diving into details.',
+    'Start with what surprised you most.',
   ];
 
   private getRandomDirective(): string {
@@ -126,6 +126,7 @@ INSTRUCTIONS:
 - Write like a thoughtful person explaining their experience to a friend — specific, descriptive, with personality.
 - The review should sound like a real customer describing what happened, not an advertisement or a template.
 - Preserve the customer's actual sentiment — do not upgrade mixed/negative feedback.
+- NEVER start a review with "..." or ellipsis — always begin with a complete, natural sentence.
 - Every draft must use DIFFERENT vocabulary, sentence structures, and openings — no two drafts should feel alike.
 ${sparseNote}
 
@@ -283,6 +284,7 @@ RULES:
 - Write like a real person telling a friend about their experience — specific and descriptive
 - Preserve the customer's actual sentiment
 - Do NOT start with the business name
+- NEVER start with "..." or ellipsis — always begin with a complete, natural sentence
 - Use completely fresh vocabulary — never reuse phrasing from any other draft
 - Output ONLY the review text, nothing else`;
 

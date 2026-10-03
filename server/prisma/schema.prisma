@@ -31,6 +31,8 @@ model Business {
   googlePlaceId   String?
   googleReviewUrl String?
   googleMapsUrl   String?
+  instagramUrl    String?
+  youtubeUrl      String?
   isDemo          Boolean            @default(false)
   isActive        Boolean            @default(true)
   createdAt       DateTime           @default(now())

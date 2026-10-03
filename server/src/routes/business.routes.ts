@@ -38,6 +38,7 @@ router.get('/:businessId/analytics', requireAuth, requireBusinessAccess(), busin
 // QR
 router.get('/:businessId/qr', requireAuth, requireBusinessAccess(), businessController.getQR);
 router.get('/:businessId/qr/config', requireAuth, requireBusinessAccess(), businessController.getQRConfig);
+router.get('/:businessId/social-qr', requireAuth, requireBusinessAccess(), businessController.getSocialQR);
 
 // AI (with stricter rate limit)
 router.get('/:businessId/ai/insights', requireAuth, requireBusinessAccess(), businessController.getAIInsights);

@@ -118,6 +118,23 @@ export function SettingsPage() {
               defaultValue={business.googlePlaceId || ''}
               onChange={e => setForm(f => ({ ...f, googlePlaceId: e.target.value }))}
             />
+            <div className="border-t pt-4 mt-2">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Social Media</h3>
+              <div className="space-y-4">
+                <Input
+                  label="Instagram URL"
+                  defaultValue={business.instagramUrl || ''}
+                  onChange={e => setForm(f => ({ ...f, instagramUrl: e.target.value }))}
+                  placeholder="https://instagram.com/yourbusiness"
+                />
+                <Input
+                  label="YouTube URL"
+                  defaultValue={business.youtubeUrl || ''}
+                  onChange={e => setForm(f => ({ ...f, youtubeUrl: e.target.value }))}
+                  placeholder="https://youtube.com/@yourbusiness"
+                />
+              </div>
+            </div>
             <Button type="submit" isLoading={updateMutation.isPending}>
               Save Changes
             </Button>

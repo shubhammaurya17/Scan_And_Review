@@ -189,8 +189,40 @@ export class BusinessController {
           config: business.qrConfig || { foregroundColor: '#000000', backgroundColor: '#FFFFFF', style: 'SQUARE' },
           reviewUrl,
           slug: business.slug,
+          instagramUrl: business.instagramUrl || '',
+          youtubeUrl: business.youtubeUrl || '',
         },
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getSocialQR(req: Request, res: Response, next: NextFunction) {
+    try {
+      const business = await prisma.business.findUnique({
+        where: { id: req.params.businessId },
+      });
+      if (!business) throw new AppError('Business not found', 404);
+
+      const platform = req.query.platform as string;
+      const format = (req.query.format as string) === 'svg' ? 'svg' : 'png';
+
+      let url: string | null = null;
+      if (platform === 'instagram') url = business.instagramUrl;
+      else if (platform === 'youtube') url = business.youtubeUrl;
+
+      if (!url) throw new AppError(`No ${platform} URL configured`, 404);
+
+      const qr = await qrService.generateSocialQR(url, format);
+
+      if (format === 'svg') {
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.send(qr);
+      } else {
+        res.setHeader('Content-Type', 'image/png');
+        res.send(qr);
+      }
     } catch (err) {
       next(err);
     }

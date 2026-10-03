@@ -24,6 +24,8 @@ export const updateBusinessSchema = z.object({
   googleReviewUrl: z.string().optional(),
   googleMapsUrl: z.string().optional(),
   googlePlaceId: z.string().optional(),
+  instagramUrl: z.string().optional(),
+  youtubeUrl: z.string().optional(),
 });
 
 export const createInsightSchema = z.object({

@@ -33,6 +33,20 @@ export class QRService {
   async getReviewUrl(slug: string) {
     return `${config.CLIENT_URL}/review/${slug}`;
   }
+
+  async generateSocialQR(url: string, format: 'png' | 'svg' = 'png') {
+    const options = {
+      color: { dark: '#000000', light: '#FFFFFF' },
+      width: 512,
+      margin: 2,
+    };
+
+    if (format === 'svg') {
+      return QRCode.toString(url, { ...options, type: 'svg' });
+    }
+
+    return QRCode.toBuffer(url, options);
+  }
 }
 
 export const qrService = new QRService();

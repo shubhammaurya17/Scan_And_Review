@@ -84,23 +84,23 @@ export class GroqService implements IAIService {
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a simple, honest Google review in 50-90 words. Just say what happened, what you liked, what could be better. Keep it straightforward like you're telling a friend.${sparseNote}`,
+        instruction: `Write a straightforward Google review in 50-90 words. Just say what happened and what stood out. Keep it honest and simple.${sparseNote}`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a warm, casual Google review in 50-80 words. Same facts but friendlier — show how it made you feel. Use everyday language, contractions, short sentences.${sparseNote}`,
+        instruction: `Write a casual, warm Google review in 50-80 words. Show how the visit made you feel. Friendly and relaxed tone.${sparseNote}`,
       },
       {
         style: 'HEARTFELT' as const,
-        instruction: `Write a sincere, personal Google review in 50-90 words. Share why this experience mattered to you. Be genuine — like you're writing to help others find the right place.${sparseNote}`,
+        instruction: `Write a sincere, personal Google review in 50-90 words. Share why this experience mattered. Genuine and from the heart.${sparseNote}`,
       },
     ];
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are helping a customer write a simple, everyday Google review for a ${input.categoryName} they visited.
+        const prompt = `You are a real customer writing a Google review for a ${input.categoryName} you visited. Write like a normal person — casual, honest, relatable.
 
-CUSTOMER FEEDBACK:
+WHAT HAPPENED:
 ${feedbackBlock}
 
 Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
@@ -108,18 +108,15 @@ Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
 ${instruction}
 
 RULES:
-- Write in first person as the customer
-- Write ONLY from the facts provided above — do NOT invent details
-- NEVER include the business name in the review
-- NEVER use words like "good", "great", "excellent", "solid", "amazing", "wonderful", "impressive", "outstanding", "exceptional"
-- Do NOT use phrases like "hidden gem", "exceeded expectations", "highly recommend", "attention to detail", "above and beyond"
-- Use simple everyday language — like texting a friend. No fancy words.
-- Preserve the customer's actual sentiment
-- Do NOT use quotation marks around the review
-- Output ONLY the review text, nothing else`;
+- Write in first person. Use ONLY the facts above — do NOT make up details.
+- Do NOT mention the business name.
+- Include the customer's highlighted insights naturally.
+- Sound like a real person, not a bot. Use simple everyday words.
+- Do NOT use quotation marks around the review.
+- Output ONLY the review text, nothing else.`;
 
         try {
-          const content = await this.generate(prompt, 0.8, 200);
+          const content = await this.generate(prompt, 0.8, 400);
           let cleaned = content.trim();
           cleaned = cleaned.replace(/^["']|["']$/g, '');
           cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');

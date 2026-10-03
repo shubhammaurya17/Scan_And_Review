@@ -55,47 +55,37 @@ export class GeminiService implements IAIService {
       ? '\nNOTE: The customer provided only star ratings with no specific details. Write brief, honest reviews. Do NOT invent any specifics. Keep each draft to 1-2 sentences.'
       : '';
 
-    const prompt = `You are helping a customer turn their actual feedback into a simple, everyday Google review for a ${input.categoryName} they visited.
+    const prompt = `You are helping a real customer write a Google review for a ${input.categoryName} they visited. Write it like a normal person would — casual, honest, relatable.
 
 CUSTOMER FEEDBACK:
 ${feedbackBlock}
 
 Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
 
-INSTRUCTIONS:
-- Write the review ONLY from the facts provided above. Use the customer's selected options and their own words.
-- Do NOT invent details: no staff names, no specific dishes/products/treatments, no prices, no outcomes the customer didn't mention.
-- NEVER include the business name anywhere in the review.
-- NEVER use generic filler words like "good", "great", "excellent", "solid", "amazing", "wonderful", "fantastic", "exceptional", "outstanding", "impressive" — instead say WHAT happened simply.
-- Write in simple everyday language — like how a normal person texts a friend about where they just went. Short sentences. No fancy vocabulary.
-- Do NOT sound like a professional writer, marketer, or AI. Sound like a regular person sharing their day.
-- Do NOT use phrases like "highly recommend", "attention to detail", "above and beyond", "hidden gem", "top-notch".
-- Preserve the customer's actual sentiment — do not upgrade mixed/negative feedback.
+RULES:
+- Use ONLY the facts above. Do NOT make up details.
+- Do NOT mention the business name.
+- Sound like a real person, not a bot or marketer. Use simple everyday words.
+- Include the customer's selected insights naturally in the review text.
+- Preserve the actual sentiment — if it was mixed, say so.
 ${sparseNote}
 
-Write exactly 3 drafts:
+Write exactly 3 different drafts, each 50-90 words:
 
-DRAFT 1 — Balanced & Authentic (50-90 words):
-A straightforward review. Just say what happened, what you liked, what could be better. Keep it simple and honest like you're telling a friend about it.
+DRAFT 1 — Straightforward: Just say what happened and what stood out.
+DRAFT 2 — Casual & warm: Same facts, friendlier tone, show how it felt.
+DRAFT 3 — Personal & sincere: Share why the experience mattered.
 
-DRAFT 2 — Warm & Natural (50-80 words):
-Same facts but warmer and more casual. Show how it made you feel. Use everyday language — contractions, simple words. Different opening from Draft 1.
-
-DRAFT 3 — Heartfelt & Personal (50-90 words):
-A personal, from-the-heart review. Share why this experience mattered to you. Be genuine and sincere — like you're writing to help other people find the right place.
-
-CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts.
-
-Format EXACTLY:
+Format EXACTLY like this (use these exact markers):
 ---STYLE1---
-[text]
+[draft 1 text here]
 ---STYLE2---
-[text]
+[draft 2 text here]
 ---STYLE3---
-[text]`;
+[draft 3 text here]`;
 
     try {
-      const content = await this.generate(prompt, 1.1, 700);
+      const content = await this.generate(prompt, 1.0, 1000);
       console.log('📝 Gemini raw response length:', content.length);
       const drafts = this.parseDrafts(content);
       if (drafts.length >= 2) return drafts;
@@ -195,23 +185,23 @@ Format EXACTLY:
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a simple, honest Google review in 50-90 words. Just say what happened, what you liked, what could be better. Keep it straightforward like you're telling a friend.${sparseNote}`,
+        instruction: `Write a straightforward Google review in 50-90 words. Just say what happened and what stood out. Keep it honest and simple.${sparseNote}`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a warm, casual Google review in 50-80 words. Same facts but friendlier — show how it made you feel. Use everyday language, contractions, short sentences.${sparseNote}`,
+        instruction: `Write a casual, warm Google review in 50-80 words. Show how the visit made you feel. Friendly and relaxed tone.${sparseNote}`,
       },
       {
         style: 'HEARTFELT' as const,
-        instruction: `Write a sincere, personal Google review in 50-90 words. Share why this experience mattered to you. Be genuine — like you're writing to help others find the right place.${sparseNote}`,
+        instruction: `Write a sincere, personal Google review in 50-90 words. Share why this experience mattered. Genuine and from the heart.${sparseNote}`,
       },
     ];
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are helping a customer write a simple, everyday Google review for a ${input.categoryName} they visited.
+        const prompt = `You are a real customer writing a Google review for a ${input.categoryName} you visited. Write like a normal person — casual, honest, relatable.
 
-CUSTOMER FEEDBACK:
+WHAT HAPPENED:
 ${feedbackBlock}
 
 Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
@@ -219,17 +209,14 @@ Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
 ${instruction}
 
 RULES:
-- Write in first person as the customer
-- Write ONLY from the facts provided above — do NOT invent details
-- NEVER include the business name in the review
-- NEVER use words like "good", "great", "excellent", "solid", "amazing", "wonderful", "impressive", "outstanding", "exceptional"
-- Do NOT use phrases like "hidden gem", "exceeded expectations", "highly recommend", "attention to detail", "above and beyond"
-- Use simple everyday language — like texting a friend. No fancy words.
-- Preserve the customer's actual sentiment
-- Output ONLY the review text, nothing else`;
+- Write in first person. Use ONLY the facts above — do NOT make up details.
+- Do NOT mention the business name.
+- Include the customer's highlighted insights naturally.
+- Sound like a real person, not a bot. Use simple everyday words.
+- Output ONLY the review text, nothing else.`;
 
         try {
-          const content = await this.generate(prompt, 1.2, 250);
+          const content = await this.generate(prompt, 1.0, 400);
           let cleaned = content.trim();
           cleaned = cleaned.replace(/^["']|["']$/g, '');
           cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');

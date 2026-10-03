@@ -24,9 +24,9 @@ export class OllamaService implements IAIService {
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
     const styles = [
-      { style: 'PROFESSIONAL' as const, instruction: 'Write a simple, honest review in 50-90 words. Just say what happened, what you liked, what could be better. Keep it straightforward like telling a friend.' },
-      { style: 'FRIENDLY' as const, instruction: 'Write a warm, casual review in 50-80 words. Show how it made you feel. Use everyday language, contractions, short sentences.' },
-      { style: 'HEARTFELT' as const, instruction: 'Write a sincere, personal review in 50-90 words. Share why this experience mattered to you. Be genuine — like you\'re writing to help others find the right place.' },
+      { style: 'PROFESSIONAL' as const, instruction: 'Write a straightforward review in 50-90 words. Just say what happened and what stood out. Keep it honest and simple.' },
+      { style: 'FRIENDLY' as const, instruction: 'Write a casual, warm review in 50-80 words. Show how the visit made you feel. Friendly and relaxed tone.' },
+      { style: 'HEARTFELT' as const, instruction: 'Write a sincere, personal review in 50-90 words. Share why this experience mattered. Genuine and from the heart.' },
     ];
 
     const feedbackBlock = this.formatFeedbackBlock(input);
@@ -37,9 +37,9 @@ export class OllamaService implements IAIService {
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are helping a customer write a simple, everyday Google review for a ${input.categoryName} they visited.
+        const prompt = `You are a real customer writing a Google review for a ${input.categoryName} you visited. Write like a normal person — casual, honest, relatable.
 
-CUSTOMER FEEDBACK:
+WHAT HAPPENED:
 ${feedbackBlock}
 
 Overall: ${input.averageRating.toFixed(1)}/5
@@ -47,19 +47,17 @@ Overall: ${input.averageRating.toFixed(1)}/5
 ${instruction}
 ${sparseNote}
 
-IMPORTANT RULES:
-- Write from the customer's perspective (first person)
-- Write ONLY from the facts provided above — do NOT invent details
-- NEVER include the business name in the review
-- NEVER use words like "good", "great", "excellent", "solid", "amazing", "wonderful", "impressive", "outstanding"
-- Do NOT use phrases like "hidden gem", "exceeded expectations", "highly recommend", "attention to detail"
-- Use simple everyday language — like texting a friend. No fancy words.
-- If ratings are low, reflect that honestly — do not turn negatives into positives
+RULES:
+- Write in first person. Use ONLY the facts above — do NOT make up details.
+- Do NOT mention the business name.
+- Include the customer's highlighted insights naturally.
+- Sound like a real person, not a bot. Use simple everyday words.
+- If ratings are low, reflect that honestly.
 
 Write only the review text, nothing else:`;
 
         try {
-          const content = await this.generate(prompt, 0.7, 256);
+          const content = await this.generate(prompt, 0.7, 400);
           return { style, content: content.trim() };
         } catch (err) {
           console.error(`Failed to generate ${style} draft:`, err);

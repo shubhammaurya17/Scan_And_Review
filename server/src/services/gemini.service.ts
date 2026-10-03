@@ -327,16 +327,38 @@ Topics:`;
   }
 
   private async generate(prompt: string, temperature: number, maxTokens: number): Promise<string> {
-    // Try the Interactions API first (recommended for gemini-3.8-flash+)
+    // Use much higher token limits — reasoning models consume tokens on thinking
+    const boostedTokens = Math.max(maxTokens * 4, 2048);
+
+    // Try Interactions API with primary model
     try {
-      return await this.generateViaInteractions(prompt, temperature, maxTokens);
-    } catch (interactionsErr) {
-      console.warn('Interactions API failed, falling back to generateContent:', (interactionsErr as Error).message);
-      return this.generateViaContent(prompt, temperature, maxTokens);
+      return await this.generateViaInteractions(prompt, temperature, boostedTokens, this.model);
+    } catch (err1) {
+      console.warn(`Interactions API (${this.model}) failed: ${(err1 as Error).message}`);
+    }
+
+    // Try Interactions API with fallback model (gemini-3.5-flash)
+    if (this.model !== 'gemini-3.5-flash') {
+      try {
+        console.log('Trying fallback model gemini-3.5-flash via Interactions API...');
+        return await this.generateViaInteractions(prompt, temperature, boostedTokens, 'gemini-3.5-flash');
+      } catch (err2) {
+        console.warn(`Interactions API (gemini-3.5-flash) failed: ${(err2 as Error).message}`);
+      }
+    }
+
+    // Last resort: generateContent API
+    try {
+      console.log('Trying generateContent API as last resort...');
+      return await this.generateViaContent(prompt, temperature, boostedTokens);
+    } catch (err3) {
+      console.error('All Gemini API methods failed:', (err3 as Error).message);
+      throw err3;
     }
   }
 
-  private async generateViaInteractions(prompt: string, temperature: number, maxTokens: number): Promise<string> {
+  private async generateViaInteractions(prompt: string, temperature: number, maxTokens: number, model?: string): Promise<string> {
+    const useModel = model || this.model;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -350,11 +372,12 @@ Topics:`;
             'x-goog-api-key': this.apiKey,
           },
           body: JSON.stringify({
-            model: this.model,
+            model: useModel,
             input: prompt,
             generation_config: {
               temperature,
               max_output_tokens: maxTokens,
+              thinking_level: 'none',
             },
           }),
           signal: controller.signal,
@@ -365,8 +388,8 @@ Topics:`;
 
       if (!res.ok) {
         const errorBody = await res.text().catch(() => 'no body');
-        console.error(`Interactions API error ${res.status}: ${errorBody}`);
-        throw new Error(`Interactions API error: ${res.status}`);
+        console.error(`Interactions API error ${res.status} (${useModel}): ${errorBody}`);
+        throw new Error(`Interactions API error: ${res.status} (${useModel})`);
       }
 
       const data = (await res.json()) as InteractionsResponse;
@@ -383,9 +406,9 @@ Topics:`;
         }
       }
 
-      if (!text) throw new Error('Empty response from Interactions API');
+      if (!text) throw new Error(`Empty response from Interactions API (${useModel})`);
 
-      console.log(`✅ Interactions API response: ${data.usage?.total_output_tokens || '?'} output tokens, ${text.length} chars`);
+      console.log(`✅ Interactions API (${useModel}): ${data.usage?.total_output_tokens || '?'} output tokens, ${text.length} chars`);
       return text;
     } catch (err) {
       clearTimeout(timeout);

@@ -13,7 +13,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(10).default('reputeai-dev-jwt-secret-change-in-production'),
   JWT_REFRESH_SECRET: z.string().min(10).default('reputeai-dev-refresh-secret-change-in-production'),
   AI_PROVIDER: z.string().default('gemini'),
-  AI_MODEL: z.string().default('gemini-3.8-flash'),
+  AI_MODEL: z.string().default('gemini-3.5-flash'),
   AI_BASE_URL: z.string().default('http://localhost:11434'),
   GROQ_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),

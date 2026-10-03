@@ -33,7 +33,7 @@ export class GeminiService implements IAIService {
     this.apiKey = config.GEMINI_API_KEY || '';
     // Only use AI_MODEL if it's actually a Gemini model; otherwise use default
     const configModel = config.AI_MODEL;
-    this.model = configModel && configModel.startsWith('gemini') ? configModel : 'gemini-3.8-flash';
+    this.model = configModel && configModel.startsWith('gemini') ? configModel : 'gemini-3.5-flash';
     console.log(`🔧 GeminiService initialized with model: ${this.model}`);
   }
 

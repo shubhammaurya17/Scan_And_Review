@@ -87,6 +87,7 @@ Format EXACTLY like this (use these exact markers):
     try {
       const content = await this.generate(prompt, 1.0, 1000);
       console.log('📝 Gemini raw response length:', content.length);
+      console.log('📝 Gemini raw response (first 500 chars):', content.substring(0, 500));
       const drafts = this.parseDrafts(content);
       if (drafts.length >= 2) return drafts;
       console.warn(`⚠️ Gemini combined prompt parsed only ${drafts.length} drafts, falling back to individual calls`);
@@ -139,29 +140,70 @@ Format EXACTLY like this (use these exact markers):
 
   private parseDrafts(content: string): GeneratedDraft[] {
     const drafts: GeneratedDraft[] = [];
+
+    // Try exact markers first
     const styleMap: Array<{ marker: string; style: GeneratedDraft['style'] }> = [
       { marker: '---STYLE1---', style: 'PROFESSIONAL' },
       { marker: '---STYLE2---', style: 'FRIENDLY' },
       { marker: '---STYLE3---', style: 'HEARTFELT' },
     ];
 
-    for (let i = 0; i < styleMap.length; i++) {
-      const { marker, style } = styleMap[i];
-      const nextMarker = styleMap[i + 1]?.marker;
-      const startIdx = content.indexOf(marker);
-      if (startIdx === -1) continue;
+    // Check if exact markers exist; if not, try flexible regex patterns
+    const hasExactMarkers = styleMap.some(s => content.includes(s.marker));
 
-      const textStart = startIdx + marker.length;
-      const textEnd = nextMarker ? content.indexOf(nextMarker) : content.length;
-      if (textEnd === -1) continue;
+    if (hasExactMarkers) {
+      for (let i = 0; i < styleMap.length; i++) {
+        const { marker, style } = styleMap[i];
+        const nextMarker = styleMap[i + 1]?.marker;
+        const startIdx = content.indexOf(marker);
+        if (startIdx === -1) continue;
 
-      let text = content.slice(textStart, textEnd).trim();
-      // Clean up any accidental quotes or prefixes
-      text = text.replace(/^["']|["']$/g, '');
-      text = text.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
+        const textStart = startIdx + marker.length;
+        const textEnd = nextMarker ? content.indexOf(nextMarker) : content.length;
+        if (textEnd === -1) continue;
 
-      if (text.length > 10) {
-        drafts.push({ style, content: text });
+        let text = content.slice(textStart, textEnd).trim();
+        text = text.replace(/^["']|["']$/g, '');
+        text = text.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
+
+        if (text.length > 10) {
+          drafts.push({ style, content: text });
+        }
+      }
+    } else {
+      // Flexible parsing: try common patterns Gemini might use
+      // Patterns: "STYLE1:", "**STYLE1**", "Draft 1:", "**Draft 1**", "1.", "1)", etc.
+      const flexPatterns = [
+        /(?:\*{0,2})(?:---\s*)?STYLE\s*1(?:\s*---)?(?:\*{0,2})[:\s]*\n?([\s\S]*?)(?=(?:\*{0,2})(?:---\s*)?STYLE\s*2)/i,
+        /(?:\*{0,2})(?:---\s*)?STYLE\s*2(?:\s*---)?(?:\*{0,2})[:\s]*\n?([\s\S]*?)(?=(?:\*{0,2})(?:---\s*)?STYLE\s*3)/i,
+        /(?:\*{0,2})(?:---\s*)?STYLE\s*3(?:\s*---)?(?:\*{0,2})[:\s]*\n?([\s\S]*?)$/i,
+      ];
+      const flexStyles: Array<GeneratedDraft['style']> = ['PROFESSIONAL', 'FRIENDLY', 'HEARTFELT'];
+
+      let matched = false;
+      for (let i = 0; i < flexPatterns.length; i++) {
+        const m = content.match(flexPatterns[i]);
+        if (m && m[1]?.trim().length > 10) {
+          let text = m[1].trim().replace(/^["']|["']$/g, '').replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');
+          drafts.push({ style: flexStyles[i], content: text });
+          matched = true;
+        }
+      }
+
+      // If still no match, try "Draft 1" / "Draft 2" / "Draft 3" pattern
+      if (!matched) {
+        const draftPatterns = [
+          /(?:\*{0,2})Draft\s*1[^:]*:?\s*(?:\*{0,2})\s*\n?([\s\S]*?)(?=(?:\*{0,2})Draft\s*2)/i,
+          /(?:\*{0,2})Draft\s*2[^:]*:?\s*(?:\*{0,2})\s*\n?([\s\S]*?)(?=(?:\*{0,2})Draft\s*3)/i,
+          /(?:\*{0,2})Draft\s*3[^:]*:?\s*(?:\*{0,2})\s*\n?([\s\S]*?)$/i,
+        ];
+        for (let i = 0; i < draftPatterns.length; i++) {
+          const m = content.match(draftPatterns[i]);
+          if (m && m[1]?.trim().length > 10) {
+            let text = m[1].trim().replace(/^["']|["']$/g, '').replace(/^(Review|Here'?s?|My review):?\s*/i, '');
+            drafts.push({ style: flexStyles[i], content: text });
+          }
+        }
       }
     }
 
@@ -217,6 +259,7 @@ RULES:
 
         try {
           const content = await this.generate(prompt, 1.0, 400);
+          console.log(`📝 Gemini individual ${style} response (${content.length} chars):`, content.substring(0, 200));
           let cleaned = content.trim();
           cleaned = cleaned.replace(/^["']|["']$/g, '');
           cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');

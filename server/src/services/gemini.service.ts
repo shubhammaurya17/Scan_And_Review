@@ -55,7 +55,7 @@ export class GeminiService implements IAIService {
       ? '\nNOTE: The customer provided only star ratings with no specific details. Write brief, honest reviews. Do NOT invent any specifics. Keep each draft to 1-2 sentences.'
       : '';
 
-    const prompt = `You are helping a customer turn their actual feedback into a natural Google review for "${input.businessName}" (${input.categoryName}).
+    const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
 
 CUSTOMER FEEDBACK:
 ${feedbackBlock}
@@ -67,21 +67,24 @@ INSTRUCTIONS:
 - Do NOT invent details: no staff names, no specific dishes/products/treatments, no prices, no outcomes the customer didn't mention.
 - Do NOT add generic praise to fill space. Do NOT use marketing language.
 - Do NOT automatically include a recommendation phrase like "highly recommend".
-- Explain WHAT was good or bad rather than just saying it was good or bad.
-- The review should sound like a real customer describing what happened, not an advertisement.
+- NEVER include the business name anywhere in the review.
+- NEVER use generic filler words like "good", "great", "excellent", "solid", "amazing", "wonderful", "fantastic" — instead describe WHAT specifically happened and WHY it mattered.
+- Explain WHAT was good or bad in concrete terms rather than labeling it with an adjective.
+- Write like a thoughtful person explaining their experience to a friend — specific, descriptive, with personality.
+- The review should sound like a real customer describing what happened, not an advertisement or a template.
 - Preserve the customer's actual sentiment — do not upgrade mixed/negative feedback.
 ${sparseNote}
 
 Write exactly 3 drafts:
 
 DRAFT 1 — Balanced & Authentic (50-90 words):
-A natural first-person review mentioning 1-3 concrete details from the feedback. Explain WHY things were good or bad.
+A thoughtful first-person review that walks through the experience. Mention 1-3 concrete details from the feedback and explain WHY they stood out. Use descriptive language that paints a picture instead of generic adjectives.
 
 DRAFT 2 — Warm & Natural (50-80 words):
-Conversational and slightly warmer. Still grounded in the same customer facts. Different sentence structure and opening.
+Conversational and emotionally genuine. Share how the experience made the customer feel. Still grounded in the same facts but told with warmth and personality. Different sentence structure and opening from Draft 1.
 
-DRAFT 3 — Short & Direct (30-50 words):
-Brief but containing at least one specific detail from the feedback. No filler.
+DRAFT 3 — Heartfelt & Personal (50-90 words):
+A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression and why. Thoughtful and sincere — reads like someone who genuinely cares about sharing their honest experience.
 
 CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts.
 
@@ -147,7 +150,7 @@ Format EXACTLY:
     const styleMap: Array<{ marker: string; style: GeneratedDraft['style'] }> = [
       { marker: '---STYLE1---', style: 'PROFESSIONAL' },
       { marker: '---STYLE2---', style: 'FRIENDLY' },
-      { marker: '---STYLE3---', style: 'CONCISE' },
+      { marker: '---STYLE3---', style: 'HEARTFELT' },
     ];
 
     for (let i = 0; i < styleMap.length; i++) {
@@ -190,21 +193,21 @@ Format EXACTLY:
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a balanced, authentic Google review in 50-90 words. A natural first-person review mentioning 1-3 concrete details from the feedback. Explain WHY things were good or bad.${sparseNote}`,
+        instruction: `Write a balanced, authentic Google review in 50-90 words. A thoughtful first-person review that walks through the experience mentioning 1-3 concrete details from the feedback. Explain WHY things stood out using descriptive language instead of generic adjectives.${sparseNote}`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a warm, natural Google review in 50-80 words. Conversational and slightly warmer. Still grounded in the same customer facts. Different sentence structure and opening.${sparseNote}`,
+        instruction: `Write a warm, natural Google review in 50-80 words. Conversational and emotionally genuine. Share how the experience made the customer feel. Grounded in the same customer facts but told with warmth and personality. Different sentence structure and opening.${sparseNote}`,
       },
       {
-        style: 'CONCISE' as const,
-        instruction: `Write a short, direct Google review in 30-50 words. Brief but containing at least one specific detail from the feedback. No filler.${sparseNote}`,
+        style: 'HEARTFELT' as const,
+        instruction: `Write a heartfelt, personal Google review in 50-90 words. A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression and why. Thoughtful and sincere.${sparseNote}`,
       },
     ];
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for "${input.businessName}" (${input.categoryName}).
+        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
 
 CUSTOMER FEEDBACK:
 ${feedbackBlock}
@@ -216,7 +219,10 @@ ${instruction}
 RULES:
 - Write in first person as the customer
 - Write ONLY from the facts provided above — do NOT invent details
+- NEVER include the business name in the review
+- NEVER use generic words like "good", "great", "excellent", "solid", "amazing", "wonderful" — describe WHAT happened and WHY it mattered instead
 - Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
+- Write like a real person telling a friend about their experience — specific and descriptive
 - Preserve the customer's actual sentiment
 - Do NOT start with the business name
 - Output ONLY the review text, nothing else`;

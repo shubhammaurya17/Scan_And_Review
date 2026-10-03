@@ -22,12 +22,11 @@ describe('Review Quality — Template Service with Structured Input', () => {
 
     const drafts = await templateService.generateReviewDrafts(input);
     expect(drafts).toHaveLength(3);
-    expect(drafts.map(d => d.style)).toEqual(expect.arrayContaining(['PROFESSIONAL', 'FRIENDLY', 'CONCISE']));
+    expect(drafts.map(d => d.style)).toEqual(expect.arrayContaining(['PROFESSIONAL', 'FRIENDLY', 'HEARTFELT']));
 
     // Each draft should contain at least one customer-provided detail
     for (const d of drafts) {
       expect(d.content.length).toBeGreaterThan(10);
-      expect(d.content).toContain('Balance Plus');
     }
   });
 
@@ -113,7 +112,7 @@ describe('Review Quality — Template Service with Structured Input', () => {
 
     const drafts = await templateService.generateReviewDrafts(input);
     expect(drafts).toHaveLength(3);
-    expect(drafts.map(d => d.style)).toEqual(expect.arrayContaining(['PROFESSIONAL', 'FRIENDLY', 'CONCISE']));
+    expect(drafts.map(d => d.style)).toEqual(expect.arrayContaining(['PROFESSIONAL', 'FRIENDLY', 'HEARTFELT']));
   });
 
   // ── Test Case 6: Low rating generates appropriate tone ──
@@ -160,7 +159,7 @@ describe('Review Quality — Template Service with Structured Input', () => {
     const styles = drafts.map(d => d.style);
     expect(styles).toContain('PROFESSIONAL');
     expect(styles).toContain('FRIENDLY');
-    expect(styles).toContain('CONCISE');
+    expect(styles).toContain('HEARTFELT');
   });
 
   // ── Test Case 8: Insights enrich template drafts ──
@@ -199,6 +198,6 @@ describe('Review Quality — Template Service with Structured Input', () => {
 
     const drafts = await templateService.generateReviewDrafts(input);
     expect(drafts).toHaveLength(3);
-    expect(drafts.map(d => d.style)).toEqual(expect.arrayContaining(['PROFESSIONAL', 'FRIENDLY', 'CONCISE']));
+    expect(drafts.map(d => d.style)).toEqual(expect.arrayContaining(['PROFESSIONAL', 'FRIENDLY', 'HEARTFELT']));
   });
 });

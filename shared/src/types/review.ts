@@ -1,4 +1,4 @@
-export type DraftStyle = 'PROFESSIONAL' | 'FRIENDLY' | 'CONCISE';
+export type DraftStyle = 'PROFESSIONAL' | 'FRIENDLY' | 'HEARTFELT';
 
 export type SessionStatus = 'STARTED' | 'RATING' | 'COMMENT' | 'DRAFTS' | 'SELECTED' | 'HANDED_OFF';
 

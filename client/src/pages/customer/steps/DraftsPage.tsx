@@ -6,13 +6,13 @@ import { Edit3, Check, RefreshCw, Copy, ClipboardPaste } from 'lucide-react';
 const STYLE_LABELS: Record<string, string> = {
   PROFESSIONAL: 'Balanced & Authentic',
   FRIENDLY: 'Warm & Natural',
-  CONCISE: 'Short & Direct',
+  HEARTFELT: 'Heartfelt & Personal',
 };
 
 const STYLE_VARIANTS: Record<string, 'info' | 'success' | 'warning'> = {
   PROFESSIONAL: 'info',
   FRIENDLY: 'success',
-  CONCISE: 'warning',
+  HEARTFELT: 'warning',
 };
 
 interface Props {
@@ -96,7 +96,11 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry }: 
             <div
               key={draft.id}
               className={`bg-white rounded-xl border-2 p-4 transition-all ${
-                isSelected ? 'border-primary-500 shadow-md' : 'border-gray-200 hover:border-primary-300'
+                isSelected
+                  ? 'border-primary-500 shadow-md ring-2 ring-primary-200'
+                  : selectedId && !isSelected
+                    ? 'border-gray-200 opacity-[0.65]'
+                    : 'border-gray-200 hover:border-primary-300'
               }`}
             >
               <div className="flex items-center justify-between mb-3">

@@ -84,21 +84,21 @@ export class GroqService implements IAIService {
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a balanced, authentic Google review in 50-90 words. A natural first-person review mentioning 1-3 concrete details from the feedback. Explain WHY things were good or bad.${sparseNote}`,
+        instruction: `Write a balanced, authentic Google review in 50-90 words. A thoughtful first-person review that walks through the experience mentioning 1-3 concrete details from the feedback. Explain WHY things stood out using descriptive language instead of generic adjectives.${sparseNote}`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a warm, natural Google review in 50-80 words. Conversational and slightly warmer. Still grounded in the same customer facts. Different sentence structure and opening.${sparseNote}`,
+        instruction: `Write a warm, natural Google review in 50-80 words. Conversational and emotionally genuine. Share how the experience made the customer feel. Grounded in the same customer facts but told with warmth and personality. Different sentence structure and opening.${sparseNote}`,
       },
       {
-        style: 'CONCISE' as const,
-        instruction: `Write a short, direct Google review in 30-50 words. Brief but containing at least one specific detail from the feedback. No filler.${sparseNote}`,
+        style: 'HEARTFELT' as const,
+        instruction: `Write a heartfelt, personal Google review in 50-90 words. A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression and why. Thoughtful and sincere.${sparseNote}`,
       },
     ];
 
     const drafts = await Promise.all(
       styles.map(async ({ style, instruction }) => {
-        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for "${input.businessName}" (${input.categoryName}).
+        const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
 
 CUSTOMER FEEDBACK:
 ${feedbackBlock}
@@ -110,7 +110,10 @@ ${instruction}
 RULES:
 - Write in first person as the customer
 - Write ONLY from the facts provided above — do NOT invent details
+- NEVER include the business name in the review
+- NEVER use generic words like "good", "great", "excellent", "solid", "amazing", "wonderful" — describe WHAT happened and WHY it mattered instead
 - Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
+- Write like a real person telling a friend about their experience — specific and descriptive
 - Preserve the customer's actual sentiment
 - Do NOT start with the business name
 - Do NOT use quotation marks around the review

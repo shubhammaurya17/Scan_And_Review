@@ -6,12 +6,12 @@ export const RATING_MAX = 5;
 export const MAX_COMMENT_LENGTH = 500;
 export const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export const DRAFT_STYLES = ['PROFESSIONAL', 'FRIENDLY', 'CONCISE'] as const;
+export const DRAFT_STYLES = ['PROFESSIONAL', 'FRIENDLY', 'HEARTFELT'] as const;
 
 export const DRAFT_STYLE_LABELS: Record<string, string> = {
   PROFESSIONAL: 'Balanced & Authentic',
   FRIENDLY: 'Warm & Natural',
-  CONCISE: 'Short & Direct',
+  HEARTFELT: 'Heartfelt & Personal',
 };
 
 export const FUNNEL_EVENT_ORDER = [

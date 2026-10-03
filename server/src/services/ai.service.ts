@@ -17,7 +17,7 @@ export interface ReviewDraftInput {
 }
 
 export interface GeneratedDraft {
-  style: 'PROFESSIONAL' | 'FRIENDLY' | 'CONCISE';
+  style: 'PROFESSIONAL' | 'FRIENDLY' | 'HEARTFELT';
   content: string;
 }
 

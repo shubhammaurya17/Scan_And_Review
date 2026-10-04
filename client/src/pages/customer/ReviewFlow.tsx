@@ -4,10 +4,11 @@ import * as reviewApi from '../../services/reviewApi';
 import { RatingPage } from './steps/RatingPage';
 import { GeneratingPage } from './steps/GeneratingPage';
 import { DraftsPage } from './steps/DraftsPage';
+import { PasteReminderPage } from './steps/PasteReminderPage';
 import { ThankYouPage } from './steps/ThankYouPage';
 import { RefreshCw } from 'lucide-react';
 
-type Step = 'loading' | 'rating' | 'generating' | 'drafts' | 'done' | 'error';
+type Step = 'loading' | 'rating' | 'generating' | 'drafts' | 'paste-reminder' | 'done' | 'error';
 
 const GENERATION_TIMEOUT_MS = 45000; // 45 seconds max for draft generation
 
@@ -290,7 +291,12 @@ export function ReviewFlow() {
             googleReviewUrl={state.googleReviewUrl}
             onSelectDraft={handleSelectDraft}
             onRetry={handleRetryDrafts}
+            onCopied={() => dispatch({ type: 'SET_STEP', payload: 'paste-reminder' })}
           />
+        )}
+
+        {state.step === 'paste-reminder' && (
+          <PasteReminderPage googleReviewUrl={state.googleReviewUrl} />
         )}
 
         {state.step === 'done' && (

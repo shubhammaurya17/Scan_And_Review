@@ -20,9 +20,10 @@ interface Props {
   googleReviewUrl: string | null;
   onSelectDraft: (draftId: string, editedText?: string) => void;
   onRetry?: () => void;
+  onCopied?: () => void;
 }
 
-export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry }: Props) {
+export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry, onCopied }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -64,8 +65,10 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry }: 
     }
     setCopied(true);
 
-    // Open Google Maps after a brief moment so user sees the "Copied" state
-    if (googleReviewUrl) {
+    // Transition to paste-reminder page if callback provided, otherwise open Google directly
+    if (onCopied) {
+      setTimeout(() => onCopied(), 300);
+    } else if (googleReviewUrl) {
       setTimeout(() => {
         window.open(googleReviewUrl, '_blank', 'noopener');
       }, 400);

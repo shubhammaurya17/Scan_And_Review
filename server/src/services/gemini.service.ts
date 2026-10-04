@@ -209,6 +209,7 @@ ${instruction}
 RULES:
 - Write in first person as the customer
 - Write ONLY from the facts provided above — do NOT invent details
+- If QUICK INSIGHTS are listed above, you MUST mention at least one of them naturally in the review — they are what the customer specifically highlighted
 - NEVER include the business name in the review
 - NEVER use generic words like "good", "great", "excellent", "solid", "amazing", "wonderful" — describe WHAT happened and WHY it mattered instead
 - Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"

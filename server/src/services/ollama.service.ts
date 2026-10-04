@@ -24,9 +24,9 @@ export class OllamaService implements IAIService {
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
     const styles = [
-      { style: 'PROFESSIONAL' as const, instruction: 'Write a balanced and authentic review in 50-90 words. Walk through the experience mentioning what specifically stood out and why. Use descriptive language instead of generic adjectives like good/great/excellent.' },
-      { style: 'FRIENDLY' as const, instruction: 'Write a warm and natural review in 50-80 words. Conversational and emotionally genuine. Share how the experience made you feel. Show genuine personality for positives and honest feedback about any negatives.' },
-      { style: 'HEARTFELT' as const, instruction: 'Write a heartfelt and personal review in 50-90 words. A deeply personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression. Thoughtful and sincere.' },
+      { style: 'PROFESSIONAL' as const, instruction: 'Write a balanced and authentic review in 30-50 words. Mention what specifically stood out and why. Use descriptive language instead of generic adjectives like good/great/excellent. 2-3 sentences max.' },
+      { style: 'FRIENDLY' as const, instruction: 'Write a warm and natural review in 30-45 words. Conversational and emotionally genuine. Share how the experience felt. Show genuine personality. 2-3 sentences max.' },
+      { style: 'HEARTFELT' as const, instruction: 'Write a heartfelt and personal review in 30-50 words. Connect the experience to why it mattered. Speak from the heart about what left an impression. 2-3 sentences max.' },
     ];
 
     const feedbackBlock = this.formatFeedbackBlock(input);

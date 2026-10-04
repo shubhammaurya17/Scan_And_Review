@@ -59,16 +59,16 @@ export function RatingPage({ business, questions, responses, insights, selectedI
       <h2 className="text-xl font-bold text-gray-900 mb-1">Share Your Feedback</h2>
       <p className="text-gray-500 text-sm mb-5">Help us understand your experience</p>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {questions.map((q, index) => (
-          <div key={q.id} className="bg-white rounded-xl p-4 shadow-sm border">
+          <div key={q.id} className="bg-white rounded-xl p-3 shadow-sm border">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium text-gray-900">{q.text}</span>
+              <span className="text-xs font-medium text-gray-900">{q.text}</span>
               <span className="text-xs text-gray-400">{index + 1}/{questions.length}</span>
             </div>
 
             {q.type === 'STAR_RATING' && (
-              <div className="flex justify-center mt-3">
+              <div className="flex justify-center mt-2">
                 <StarRating
                   value={responses[q.id]?.rating || 0}
                   onChange={(rating) => onSetResponse(q.id, { rating })}
@@ -85,7 +85,7 @@ export function RatingPage({ business, questions, responses, insights, selectedI
             )}
 
             {q.type === 'SINGLE_CHOICE' && q.options && (
-              <div className="flex flex-wrap gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {q.options.map(opt => {
                   const selected = responses[q.id]?.answer === opt;
                   return (
@@ -106,7 +106,7 @@ export function RatingPage({ business, questions, responses, insights, selectedI
             )}
 
             {q.type === 'MULTI_CHOICE' && q.options && (
-              <div className="flex flex-wrap gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {q.options.map(opt => {
                   const currentAnswers: string[] = (() => {
                     try { return responses[q.id]?.answer ? JSON.parse(responses[q.id].answer!) : []; }
@@ -143,7 +143,7 @@ export function RatingPage({ business, questions, responses, insights, selectedI
                 placeholder={q.placeholder || 'Share your thoughts...'}
                 maxLength={500}
                 rows={2}
-                className="w-full mt-3 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             )}
           </div>

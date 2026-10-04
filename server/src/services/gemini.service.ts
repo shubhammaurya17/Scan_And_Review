@@ -132,16 +132,16 @@ ${sparseNote}
 
 Write exactly 3 drafts:
 
-DRAFT 1 — Balanced & Authentic (35-60 words):
-A thoughtful first-person review that walks through the experience. Mention 1-2 concrete details from the feedback and explain WHY they stood out. Keep it concise — real reviewers don't write essays.
+DRAFT 1 — Balanced & Authentic (30-50 words):
+A thoughtful first-person review mentioning 1-2 concrete details. Explain WHY they stood out. 2-3 sentences max.
 
-DRAFT 2 — Warm & Natural (35-55 words):
-Conversational and emotionally genuine. Share how the experience made the customer feel. Still grounded in the same facts but told with warmth. Different sentence structure and opening from Draft 1.
+DRAFT 2 — Warm & Natural (30-45 words):
+Conversational and emotionally genuine. Share how the experience felt. Grounded in the same facts but told with warmth. Different structure from Draft 1. 2-3 sentences max.
 
-DRAFT 3 — Heartfelt & Personal (35-60 words):
-A personal, reflective review that connects the experience to why it mattered. Speak from the heart about what left an impression. Thoughtful and sincere — reads like someone sharing an honest experience.
+DRAFT 3 — Heartfelt & Personal (30-50 words):
+A personal review connecting the experience to why it mattered. Speak from the heart. Thoughtful and sincere. 2-3 sentences max.
 
-CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts. Keep each draft SHORT and punchy — like a real Google review, not a blog post.
+CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts. Keep each draft VERY SHORT — 2-3 sentences max, like a real Google review.
 
 Format EXACTLY:
 ---STYLE1---
@@ -152,7 +152,7 @@ Format EXACTLY:
 [text]`;
 
     try {
-      const content = await this.generate(prompt, 1.1, 500);
+      const content = await this.generate(prompt, 1.1, 400);
       const drafts = this.parseDrafts(content);
       if (drafts.length >= 2) return drafts;
       // Gemini often hits MAX_TOKENS and returns only 1 draft — fall back
@@ -251,15 +251,15 @@ Format EXACTLY:
     const styles = [
       {
         style: 'PROFESSIONAL' as const,
-        instruction: `Write a balanced, authentic Google review in 35-60 words. A thoughtful first-person review mentioning 1-2 concrete details from the feedback. Explain WHY things stood out — keep it concise like a real review, not an essay.${sparseNote}`,
+        instruction: `Write a balanced, authentic Google review in 30-50 words. A thoughtful first-person review mentioning 1-2 concrete details. Explain WHY things stood out — 2-3 sentences max.${sparseNote}`,
       },
       {
         style: 'FRIENDLY' as const,
-        instruction: `Write a warm, natural Google review in 35-55 words. Conversational and emotionally genuine. Share how the experience made the customer feel. Grounded in the same facts but told with warmth. Short and punchy.${sparseNote}`,
+        instruction: `Write a warm, natural Google review in 30-45 words. Conversational and emotionally genuine. Share how the experience felt. 2-3 sentences max.${sparseNote}`,
       },
       {
         style: 'HEARTFELT' as const,
-        instruction: `Write a heartfelt, personal Google review in 35-60 words. A personal, reflective review that connects the experience to why it mattered. Speak from the heart. Thoughtful and sincere — keep it brief.${sparseNote}`,
+        instruction: `Write a heartfelt, personal Google review in 30-50 words. Connect the experience to why it mattered. Speak from the heart. 2-3 sentences max.${sparseNote}`,
       },
     ];
 
@@ -289,7 +289,7 @@ RULES:
 - Output ONLY the review text, nothing else`;
 
         try {
-          const content = await this.generate(prompt, 1.2, 150);
+          const content = await this.generate(prompt, 1.2, 120);
           let cleaned = content.trim();
           cleaned = cleaned.replace(/^["']|["']$/g, '');
           cleaned = cleaned.replace(/^(Review|Here'?s?|My review|Draft):?\s*/i, '');

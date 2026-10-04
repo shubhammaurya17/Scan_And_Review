@@ -25,7 +25,7 @@ export function PasteReminderPage({ googleReviewUrl }: Props) {
 
       <p className="text-base text-gray-500 mb-2">Review Copied!</p>
       <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
-        Paste your review in the text box
+        Paste your review in the review box
       </h2>
       <p className="text-sm text-gray-400">Redirecting you to Google...</p>
 

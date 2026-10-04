@@ -145,48 +145,50 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry, on
                   Use This Review
                 </Button>
               )}
+
+              {/* Continue button — shown inline right below the selected draft */}
+              {isSelected && (
+                <div className="mt-3 space-y-3">
+                  <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 text-center">
+                    {copied ? (
+                      <div className="flex items-center justify-center gap-2 text-green-700">
+                        <ClipboardPaste size={18} />
+                        <span className="text-sm font-medium">Copied! Opening Google Maps...</span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-primary-700">
+                        Tap below to copy your review and open Google Maps
+                      </p>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={handleCopyAndContinue}
+                    size="lg"
+                    className="w-full"
+                    disabled={copied}
+                  >
+                    {copied ? (
+                      <><Check size={18} className="mr-2" /> Copied & Redirecting...</>
+                    ) : (
+                      <><Copy size={18} className="mr-2" /> Continue</>
+                    )}
+                  </Button>
+
+                  {!googleReviewUrl && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                      <p className="text-sm text-amber-700">
+                        No Google review page is configured. You can paste your review on Google manually.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
-
-        {/* Copy & Continue — shown inline after selecting a draft */}
-        {selectedId && (
-          <div className="mt-2 space-y-3">
-            <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 text-center">
-              {copied ? (
-                <div className="flex items-center justify-center gap-2 text-green-700">
-                  <ClipboardPaste size={18} />
-                  <span className="text-sm font-medium">Copied! Opening Google Maps...</span>
-                </div>
-              ) : (
-                <p className="text-sm text-primary-700">
-                  Tap below to copy your review and open Google Maps
-                </p>
-              )}
-            </div>
-
-            <Button
-              onClick={handleCopyAndContinue}
-              size="lg"
-              className="w-full"
-              disabled={copied}
-            >
-              {copied ? (
-                <><Check size={18} className="mr-2" /> Copied & Redirecting...</>
-              ) : (
-                <><Copy size={18} className="mr-2" /> Continue</>
-              )}
-            </Button>
-
-            {!googleReviewUrl && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-                <p className="text-sm text-amber-700">
-                  No Google review page is configured. You can paste your review on Google manually.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+      </div>
+      )}
       </div>
       )}
     </div>

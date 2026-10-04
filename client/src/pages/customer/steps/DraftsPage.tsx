@@ -1,10 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
-import { Toast } from '../../../components/ui/Toast';
-import { HandoffOverlay } from '../../../components/customer/HandoffOverlay';
-import { getGoogleReviewUrl } from '../../../utils/googleMapsLink';
-import { Edit3, Check, RefreshCw, Copy } from 'lucide-react';
+import { Edit3, Check, RefreshCw, Copy, ClipboardPaste } from 'lucide-react';
 
 const STYLE_LABELS: Record<string, string> = {
   PROFESSIONAL: 'Balanced & Authentic',
@@ -29,8 +26,7 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry }: 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedText, setEditedText] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showToast, setShowToast] = useState(false);
-  const [showOverlay, setShowOverlay] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleEdit = (draft: { id: string; content: string }) => {
     setEditingId(draft.id);
@@ -39,8 +35,7 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry }: 
 
   const handleSelect = (draftId: string) => {
     setSelectedId(draftId);
-    setShowToast(false);
-    setShowOverlay(false);
+    setCopied(false);
     // Record the selection in the backend
     if (editingId === draftId) {
       onSelectDraft(draftId, editedText);
@@ -67,46 +62,20 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry }: 
       document.execCommand('copy');
       document.body.removeChild(textarea);
     }
+    setCopied(true);
 
-    // Show toast + overlay
-    setShowToast(true);
+    // Open Google Maps after a brief moment so user sees the "Copied" state
     if (googleReviewUrl) {
-      setShowOverlay(true);
+      setTimeout(() => {
+        window.open(googleReviewUrl, '_blank', 'noopener');
+      }, 400);
     }
   };
-
-  const handleRedirect = useCallback(() => {
-    if (googleReviewUrl) {
-      const url = getGoogleReviewUrl(googleReviewUrl);
-      window.open(url, '_blank', 'noopener');
-    }
-    setShowOverlay(false);
-  }, [googleReviewUrl]);
-
-  const handleCancelOverlay = useCallback(() => {
-    setShowOverlay(false);
-  }, []);
 
   return (
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your Review</h2>
       <p className="text-gray-500 text-sm mb-6">Select a style that feels right, or edit to make it yours</p>
-
-      {/* Toast notification */}
-      <Toast
-        message="Review copied to clipboard!"
-        visible={showToast}
-        onClose={() => setShowToast(false)}
-        duration={4000}
-      />
-
-      {/* Handoff overlay with animated instructions */}
-      <HandoffOverlay
-        visible={showOverlay}
-        onRedirect={handleRedirect}
-        onCancel={handleCancelOverlay}
-        countdownSeconds={4}
-      />
 
       {drafts.length === 0 ? (
         <div className="text-center py-10">
@@ -181,17 +150,29 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry }: 
         {selectedId && (
           <div className="mt-2 space-y-3">
             <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 text-center">
-              <p className="text-sm text-primary-700">
-                Tap below to copy your review and open Google Maps
-              </p>
+              {copied ? (
+                <div className="flex items-center justify-center gap-2 text-green-700">
+                  <ClipboardPaste size={18} />
+                  <span className="text-sm font-medium">Copied! Opening Google Maps...</span>
+                </div>
+              ) : (
+                <p className="text-sm text-primary-700">
+                  Tap below to copy your review and open Google Maps
+                </p>
+              )}
             </div>
 
             <Button
               onClick={handleCopyAndContinue}
               size="lg"
               className="w-full"
+              disabled={copied}
             >
-              <Copy size={18} className="mr-2" /> Copy & Continue to Google
+              {copied ? (
+                <><Check size={18} className="mr-2" /> Copied & Redirecting...</>
+              ) : (
+                <><Copy size={18} className="mr-2" /> Copy & Continue to Google</>
+              )}
             </Button>
 
             {!googleReviewUrl && (

@@ -23,10 +23,10 @@ export function PasteReminderPage({ googleReviewUrl }: Props) {
         </div>
       </div>
 
-      <h2 className="text-xl font-bold text-gray-900 mb-2">Review Copied!</h2>
-      <p className="text-base text-gray-600 mb-1">
-        Paste your review in the Google review form
-      </p>
+      <p className="text-base text-gray-500 mb-2">Review Copied!</p>
+      <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
+        Paste your review in the text box
+      </h2>
       <p className="text-sm text-gray-400">Redirecting you to Google...</p>
 
       {/* Progress bar */}

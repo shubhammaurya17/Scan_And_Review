@@ -49,6 +49,16 @@ type Action =
 
 const MAX_RETRIES = 3;
 
+// Preferred draft order: HEARTFELT first, then PROFESSIONAL, then FRIENDLY
+const DRAFT_ORDER = ['HEARTFELT', 'PROFESSIONAL', 'FRIENDLY'];
+function sortDrafts(drafts: any[]) {
+  return [...drafts].sort((a, b) => {
+    const ai = DRAFT_ORDER.indexOf(a.style);
+    const bi = DRAFT_ORDER.indexOf(b.style);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+}
+
 const initialState: State = {
   step: 'loading',
   business: null,
@@ -197,7 +207,7 @@ export function ReviewFlow() {
       });
 
       const drafts = await reviewApi.generateDrafts(businessSlug, state.sessionToken);
-      dispatch({ type: 'SET_DRAFTS', payload: drafts });
+      dispatch({ type: 'SET_DRAFTS', payload: sortDrafts(drafts) });
     } catch (err: any) {
       dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || 'Failed to generate drafts' });
     } finally {
@@ -213,7 +223,7 @@ export function ReviewFlow() {
 
     try {
       const drafts = await reviewApi.generateDrafts(businessSlug, state.sessionToken);
-      dispatch({ type: 'SET_DRAFTS', payload: drafts });
+      dispatch({ type: 'SET_DRAFTS', payload: sortDrafts(drafts) });
     } catch (err: any) {
       dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || 'Failed to generate drafts' });
     } finally {

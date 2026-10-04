@@ -174,7 +174,7 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry, on
               {copied ? (
                 <><Check size={18} className="mr-2" /> Copied & Redirecting...</>
               ) : (
-                <><Copy size={18} className="mr-2" /> Copy & Continue to Google</>
+                <><Copy size={18} className="mr-2" /> Continue</>
               )}
             </Button>
 

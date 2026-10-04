@@ -89,71 +89,9 @@ export class GeminiService implements IAIService {
   }
 
   async generateReviewDrafts(input: ReviewDraftInput): Promise<GeneratedDraft[]> {
-    const feedbackBlock = this.formatFeedbackBlock(input);
-    const sparse = this.isSparse(input);
-
-    const overallSentiment = input.averageRating >= 4 ? 'mostly positive'
-      : input.averageRating >= 3 ? 'mixed'
-      : 'mostly negative';
-
-    const sparseNote = sparse
-      ? '\nNOTE: The customer provided only star ratings with no specific details. Write brief, honest reviews. Do NOT invent any specifics. Keep each draft to 1-2 sentences.'
-      : '';
-
-    const prompt = `You are helping a customer turn their actual feedback into a natural Google review for a ${input.categoryName} they visited.
-${this.getRandomDirective()}
-
-CUSTOMER FEEDBACK:
-${feedbackBlock}
-
-Overall: ${input.averageRating.toFixed(1)}/5 (${overallSentiment})
-
-INSTRUCTIONS:
-- Write the review ONLY from the facts provided above. Use the customer's selected options and their own words.
-- Do NOT invent details: no staff names, no specific dishes/products/treatments, no prices, no outcomes the customer didn't mention.
-- Do NOT add generic praise to fill space. Do NOT use marketing language.
-- Do NOT automatically include a recommendation phrase like "highly recommend".
-- NEVER include the business name anywhere in the review.
-- NEVER use generic filler words like "good", "great", "excellent", "solid", "amazing", "wonderful", "fantastic" — instead describe WHAT specifically happened and WHY it mattered.
-- Explain WHAT was good or bad in concrete terms rather than labeling it with an adjective.
-- USE SIMPLE, EVERYDAY ENGLISH ONLY. Write like a normal person talks — plain, easy words that everyone knows. NO idioms, NO metaphors, NO figurative language, NO poetic phrases. For example, NEVER write things like "my shoulders dropped" or "a breath of fresh air" or "hit the nail on the head". Just say what happened directly.
-- The review should sound like a real customer texting a friend about their visit — casual, simple, honest.
-- Preserve the customer's actual sentiment — do not upgrade mixed/negative feedback.
-- NEVER start a review with "..." or ellipsis — always begin with a complete, natural sentence.
-- Every draft must use DIFFERENT vocabulary, sentence structures, and openings — no two drafts should feel alike.
-${sparseNote}
-
-Write exactly 3 drafts:
-
-DRAFT 1 — Balanced & Authentic (30-50 words):
-A thoughtful first-person review mentioning 1-2 concrete details. Explain WHY they stood out. 2-3 sentences max.
-
-DRAFT 2 — Warm & Natural (30-45 words):
-Conversational and emotionally genuine. Share how the experience felt. Grounded in the same facts but told with warmth. Different structure from Draft 1. 2-3 sentences max.
-
-DRAFT 3 — Heartfelt & Personal (30-50 words):
-A personal review connecting the experience to why it mattered. Speak from the heart. Thoughtful and sincere. 2-3 sentences max.
-
-CRITICAL: All 3 drafts must use the SAME customer-provided facts. Style changes wording, not facts. Keep each draft VERY SHORT — 2-3 sentences max, like a real Google review.
-
-Format EXACTLY:
----STYLE1---
-[text]
----STYLE2---
-[text]
----STYLE3---
-[text]`;
-
-    try {
-      const content = await this.generate(prompt, 1.1, 400);
-      const drafts = this.parseDrafts(content);
-      if (drafts.length >= 2) return drafts;
-      // Gemini often hits MAX_TOKENS and returns only 1 draft — fall back
-      return this.generateDraftsIndividually(input);
-    } catch (err) {
-      console.error('Gemini draft generation failed, trying individual calls:', err);
-      return this.generateDraftsIndividually(input);
-    }
+    // Go directly to parallel individual calls — the single-prompt approach
+    // often hits MAX_TOKENS and falls back here anyway, wasting a round-trip
+    return this.generateDraftsIndividually(input);
   }
 
   private formatFeedbackBlock(input: ReviewDraftInput): string {
@@ -364,8 +302,8 @@ Topics:`;
   }
 
   private async generate(prompt: string, temperature: number, maxTokens: number): Promise<string> {
-    // Use much higher token limits — reasoning models consume tokens on thinking
-    const boostedTokens = Math.max(maxTokens * 4, 2048);
+    // Boost tokens moderately for reasoning overhead, but cap to avoid slow generation
+    const boostedTokens = Math.max(maxTokens * 3, 512);
 
     // Try Interactions API with primary model
     try {

@@ -269,8 +269,8 @@ export class ReviewService {
 
     try {
       drafts = await aiService.generateReviewDrafts(draftInput);
-      // Filter out any drafts with empty or truncated content (< 100 chars is likely cut off)
-      drafts = drafts.filter(d => d.content && d.content.trim().length >= 100);
+      // Filter out any drafts with empty or truncated content
+      drafts = drafts.filter(d => d.content && d.content.trim().length >= 50);
       console.log(`✅ ${serviceName} returned ${drafts.length} valid drafts`);
     } catch (err) {
       console.error(`❌ ${serviceName} threw during draft generation:`, err);
@@ -280,43 +280,15 @@ export class ReviewService {
     // Validate drafts with ReviewValidator
     const validator = new ReviewValidator();
     const validatedDrafts: { style: string; content: string }[] = [];
-    const failedDrafts: { style: string; content: string; reasons: string[] }[] = [];
 
     for (const d of drafts) {
       const result = validator.validate(d.content, draftInput);
       if (result.passed) {
         validatedDrafts.push(d);
       } else {
-        console.warn(`Draft ${d.style} failed validation: ${result.reasons.join(', ')}`);
-        failedDrafts.push({ ...d, reasons: result.reasons });
-      }
-    }
-
-    // Retry failed drafts once
-    if (failedDrafts.length > 0 && drafts.length > 0) {
-      try {
-        const retryDrafts = await aiService.generateReviewDrafts(draftInput);
-        const retryFiltered = retryDrafts.filter(d => d.content && d.content.trim().length >= 100);
-        for (const failed of failedDrafts) {
-          const retry = retryFiltered.find(r => r.style === failed.style);
-          if (retry) {
-            const retryResult = validator.validate(retry.content, draftInput);
-            if (retryResult.passed) {
-              validatedDrafts.push(retry);
-              console.log(`✅ Retry for ${failed.style} passed validation`);
-            } else {
-              console.warn(`Retry for ${failed.style} also failed, using original`);
-              validatedDrafts.push({ style: failed.style, content: failed.content });
-            }
-          } else {
-            validatedDrafts.push({ style: failed.style, content: failed.content });
-          }
-        }
-      } catch (retryErr) {
-        console.error('Retry generation failed, using original drafts:', retryErr);
-        for (const failed of failedDrafts) {
-          validatedDrafts.push({ style: failed.style, content: failed.content });
-        }
+        // Use the draft as-is rather than making a costly full retry round-trip
+        console.warn(`Draft ${d.style} soft-failed validation (${result.reasons.join(', ')}), using anyway`);
+        validatedDrafts.push(d);
       }
     }
 
@@ -341,33 +313,36 @@ export class ReviewService {
       drafts = await templateService.generateReviewDrafts(draftInput);
     }
 
-    // Delete existing drafts for this session
-    await prisma.reviewDraft.deleteMany({ where: { sessionId: session.id } });
+    // Delete existing drafts and save new ones in a single transaction
+    const savedDrafts = await prisma.$transaction(async (tx) => {
+      await tx.reviewDraft.deleteMany({ where: { sessionId: session.id } });
 
-    // Save drafts
-    const savedDrafts = await Promise.all(
-      drafts.map(d =>
-        prisma.reviewDraft.create({
-          data: {
-            sessionId: session.id,
-            style: d.style,
-            content: d.content,
-          },
-        })
-      )
-    );
+      const created = await Promise.all(
+        drafts.map(d =>
+          tx.reviewDraft.create({
+            data: {
+              sessionId: session.id,
+              style: d.style,
+              content: d.content,
+            },
+          })
+        )
+      );
 
-    await prisma.reviewSession.update({
-      where: { id: session.id },
-      data: { status: 'DRAFTS' },
-    });
+      await tx.reviewSession.update({
+        where: { id: session.id },
+        data: { status: 'DRAFTS' },
+      });
 
-    await prisma.funnelEvent.create({
-      data: {
-        businessId: session.businessId,
-        sessionId: session.id,
-        eventType: 'DRAFTS_GENERATED',
-      },
+      await tx.funnelEvent.create({
+        data: {
+          businessId: session.businessId,
+          sessionId: session.id,
+          eventType: 'DRAFTS_GENERATED',
+        },
+      });
+
+      return created;
     });
 
     return savedDrafts.map(d => ({

@@ -43,7 +43,7 @@ export function OverviewPage() {
   const unreadAlertCount = alertsResult?.unreadCount || 0;
 
   const stats = [
-    { label: 'QR Feedbacks', value: feedback?.sources?.appFeedback || 0, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
+    { label: 'QR Feedbacks', value: funnel?.ratingsCompleted || 0, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
     { label: 'Average Rating', value: feedback?.averageRating?.toFixed(1) || '0.0', icon: TrendingUp, color: 'text-amber-600 bg-amber-50' },
     { label: 'Google Reviews', value: funnel?.googleReviewCount || 0, icon: Star, color: 'text-yellow-600 bg-yellow-50' },
     { label: 'Sessions Started', value: funnel?.sessionsStarted || 0, icon: Users, color: 'text-green-600 bg-green-50' },

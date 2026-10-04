@@ -60,6 +60,9 @@ export class BusinessController {
         data: {
           businessId,
           text: req.body.text,
+          type: req.body.type || 'STAR_RATING',
+          options: req.body.options ? JSON.stringify(req.body.options) : null,
+          placeholder: req.body.placeholder || null,
           sortOrder: req.body.sortOrder ?? (maxOrder ? maxOrder.sortOrder + 1 : 0),
         },
       });
@@ -71,9 +74,14 @@ export class BusinessController {
 
   async updateQuestion(req: Request, res: Response, next: NextFunction) {
     try {
+      const updateData: Record<string, unknown> = { ...req.body };
+      // Serialize options array to JSON string for storage
+      if ('options' in updateData) {
+        updateData.options = Array.isArray(updateData.options) ? JSON.stringify(updateData.options) : null;
+      }
       const question = await prisma.businessQuestion.update({
         where: { id: req.params.questionId },
-        data: req.body,
+        data: updateData,
       });
       res.json({ success: true, data: question });
     } catch (err) {

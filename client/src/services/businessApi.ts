@@ -15,7 +15,7 @@ export async function getQuestions(businessId: string) {
   return data.data;
 }
 
-export async function createQuestion(businessId: string, payload: { text: string; sortOrder?: number }) {
+export async function createQuestion(businessId: string, payload: { text: string; type?: string; options?: string[]; placeholder?: string; sortOrder?: number }) {
   const { data } = await api.post(`/business/${businessId}/questions`, payload);
   return data.data;
 }

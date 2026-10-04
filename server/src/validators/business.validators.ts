@@ -1,12 +1,28 @@
 import { z } from 'zod';
 
+const questionTypeEnum = z.enum(['STAR_RATING', 'SINGLE_CHOICE', 'MULTI_CHOICE', 'TEXT']);
+
 export const createQuestionSchema = z.object({
   text: z.string().min(3).max(200),
+  type: questionTypeEnum.optional().default('STAR_RATING'),
+  options: z.array(z.string().min(1).max(50)).min(2).max(10).optional(),
+  placeholder: z.string().max(200).optional(),
   sortOrder: z.number().int().min(0).optional(),
-});
+}).refine(
+  (data) => {
+    if (data.type === 'SINGLE_CHOICE' || data.type === 'MULTI_CHOICE') {
+      return data.options && data.options.length >= 2;
+    }
+    return true;
+  },
+  { message: 'Choice questions require at least 2 options', path: ['options'] }
+);
 
 export const updateQuestionSchema = z.object({
   text: z.string().min(3).max(200).optional(),
+  type: questionTypeEnum.optional(),
+  options: z.array(z.string().min(1).max(50)).min(2).max(10).optional().nullable(),
+  placeholder: z.string().max(200).optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 });

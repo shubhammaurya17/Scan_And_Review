@@ -33,10 +33,15 @@ export interface Business {
   updatedAt: Date;
 }
 
+export type QuestionType = 'STAR_RATING' | 'SINGLE_CHOICE' | 'MULTI_CHOICE' | 'TEXT';
+
 export interface BusinessQuestion {
   id: string;
   businessId: string;
   text: string;
+  type: QuestionType;
+  options: string[] | null;
+  placeholder: string | null;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;

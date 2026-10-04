@@ -31,32 +31,25 @@ export class GeminiService implements IAIService {
 
   // Random voice/perspective directives to ensure uniqueness across identical inputs
   private readonly voiceDirectives = [
-    'Write as someone who notices small details others might miss.',
-    'Write as someone who values efficiency and getting straight to the point about what matters.',
-    'Write as someone who tends to compare experiences to past visits elsewhere.',
-    'Write as someone who focuses on how the atmosphere and environment made them feel.',
-    'Write as someone who pays close attention to how they were treated by staff.',
-    'Write as someone who weighs value for money in everything they do.',
-    'Write as someone who appreciates when things just work smoothly without hassle.',
-    'Write as someone who is usually skeptical but was genuinely surprised this time.',
-    'Write as someone who came in with specific expectations based on what they heard.',
-    'Write as someone reflective who connects experiences to their daily life.',
-    'Write as someone practical who focuses on whether they got what they came for.',
-    'Write as someone who rarely writes reviews but felt compelled to share this time.',
-    'Write as someone who notices the effort behind the scenes that most people overlook.',
-    'Write as someone who values consistency and reliability above all else.',
-    'Write as someone who focuses on the emotional impact of the experience.',
+    'Write as someone straightforward who says what they liked or didn\'t like.',
+    'Write as someone who gets to the point about what mattered most.',
+    'Write as someone who just wants to share a quick honest take.',
+    'Write as someone casual who talks about their visit simply.',
+    'Write as someone who focuses on what they got for their money.',
+    'Write as someone who noticed how the staff treated them.',
+    'Write as someone who cares about whether things worked smoothly.',
+    'Write as someone who doesn\'t usually write reviews but wanted to this time.',
+    'Write as someone who paid attention to the little things.',
+    'Write as someone who had a clear expectation going in.',
   ];
 
   private readonly openingStyles = [
-    'Start with what first caught your attention.',
-    'Start with how you felt walking in.',
-    'Start with the reason you decided to visit.',
-    'Start with the highlight of your experience.',
-    'Start with an honest admission or expectation you had.',
-    'Start with a specific moment that stood out.',
-    'Start with the overall vibe before diving into details.',
-    'Start with what surprised you most.',
+    'Start with what you liked or noticed first.',
+    'Start with why you went there.',
+    'Start with the best part of your visit.',
+    'Start with how the experience was overall.',
+    'Start with something specific that happened.',
+    'Start with what you were expecting.',
   ];
 
   private getRandomDirective(): string {
@@ -123,8 +116,8 @@ INSTRUCTIONS:
 - NEVER include the business name anywhere in the review.
 - NEVER use generic filler words like "good", "great", "excellent", "solid", "amazing", "wonderful", "fantastic" — instead describe WHAT specifically happened and WHY it mattered.
 - Explain WHAT was good or bad in concrete terms rather than labeling it with an adjective.
-- Write like a thoughtful person explaining their experience to a friend — specific, descriptive, with personality.
-- The review should sound like a real customer describing what happened, not an advertisement or a template.
+- USE SIMPLE, EVERYDAY ENGLISH ONLY. Write like a normal person talks — plain, easy words that everyone knows. NO idioms, NO metaphors, NO figurative language, NO poetic phrases. For example, NEVER write things like "my shoulders dropped" or "a breath of fresh air" or "hit the nail on the head". Just say what happened directly.
+- The review should sound like a real customer texting a friend about their visit — casual, simple, honest.
 - Preserve the customer's actual sentiment — do not upgrade mixed/negative feedback.
 - NEVER start a review with "..." or ellipsis — always begin with a complete, natural sentence.
 - Every draft must use DIFFERENT vocabulary, sentence structures, and openings — no two drafts should feel alike.
@@ -281,7 +274,8 @@ RULES:
 - NEVER include the business name in the review
 - NEVER use generic words like "good", "great", "excellent", "solid", "amazing", "wonderful" — describe WHAT happened and WHY it mattered instead
 - Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
-- Write like a real person telling a friend about their experience — specific and descriptive
+- USE SIMPLE, EVERYDAY ENGLISH ONLY. Plain words everyone knows. NO idioms, NO metaphors, NO figurative language. Never write things like "my shoulders dropped" or "a breath of fresh air". Just say what happened directly.
+- Write like a normal person texting a friend about their visit — casual, simple, honest
 - Preserve the customer's actual sentiment
 - Do NOT start with the business name
 - NEVER start with "..." or ellipsis — always begin with a complete, natural sentence

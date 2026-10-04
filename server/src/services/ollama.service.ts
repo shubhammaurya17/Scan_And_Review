@@ -54,8 +54,8 @@ IMPORTANT RULES:
 - NEVER use generic words like "good", "great", "excellent", "solid", "amazing" — describe WHAT happened and WHY it mattered
 - Do NOT use generic phrases like "hidden gem", "exceeded expectations", "highly recommend"
 - If ratings are low, reflect that honestly — do not turn negatives into positives
-- Write like a real person telling a friend about their experience
-- Keep it natural and authentic
+- USE SIMPLE, EVERYDAY ENGLISH ONLY. Plain words everyone knows. NO idioms, NO metaphors, NO figurative language. Never write things like "my shoulders dropped" or "a breath of fresh air". Just say what happened directly.
+- Write like a normal person texting a friend about their visit — casual, simple, honest
 
 Write only the review text, nothing else:`;
 

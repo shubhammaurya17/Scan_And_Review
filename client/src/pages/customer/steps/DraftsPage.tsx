@@ -189,8 +189,6 @@ export function DraftsPage({ drafts, googleReviewUrl, onSelectDraft, onRetry, on
         })}
       </div>
       )}
-      </div>
-      )}
     </div>
   );
 }

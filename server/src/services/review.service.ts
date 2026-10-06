@@ -7,6 +7,19 @@ import { AppError } from '../utils/AppError';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 
+/**
+ * Extract area/neighborhood from a freeform address string.
+ * "123 Main Street, Downtown" → "Downtown"
+ * "45 MG Road, Koramangala, Bangalore" → "Koramangala"
+ * null or single-segment → undefined
+ */
+function extractArea(address?: string | null): string | undefined {
+  if (!address) return undefined;
+  const parts = address.split(',').map(p => p.trim()).filter(Boolean);
+  if (parts.length < 2) return undefined;
+  return parts.length === 2 ? parts[1] : parts[parts.length - 2];
+}
+
 export class ReviewService {
   async getBusinessInfo(slug: string) {
     const business = await prisma.business.findUnique({
@@ -260,6 +273,8 @@ export class ReviewService {
       comment: session.feedback?.comment || undefined,
       averageRating,
       selectedInsights,
+      locationArea: extractArea(session.business.address),
+      businessDescription: session.business.description || undefined,
     };
 
     let drafts: { style: string; content: string }[] = [];

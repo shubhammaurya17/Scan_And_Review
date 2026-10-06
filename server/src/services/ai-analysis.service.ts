@@ -1,5 +1,4 @@
 import { prisma } from '../config/database';
-import { getAIServiceAsync } from './ai-factory';
 
 export class AIAnalysisService {
   async analyzeFeedbackBatch(businessId: string, startDate: Date, endDate: Date) {
@@ -12,7 +11,6 @@ export class AIAnalysisService {
       include: { responses: { include: { question: true } }, feedback: true },
     });
 
-    const aiService = await getAIServiceAsync();
     const comments = sessions
       .filter(s => s.feedback?.comment)
       .map(s => s.feedback!.comment!);
@@ -31,31 +29,16 @@ export class AIAnalysisService {
 
     const allComments = [...comments, ...googleComments];
 
-    // Sentiment analysis on all comments (app + Google)
-    const sentimentResults = await Promise.all(
-      allComments.map(async (comment) => {
-        try {
-          return await aiService.analyzeSentiment(comment);
-        } catch {
-          return { score: 0, label: 'NEUTRAL' as const };
-        }
-      })
-    );
+    // Sentiment analysis disabled — section removed from dashboard
+    const sentimentResults = allComments.map(() => ({ score: 0, label: 'NEUTRAL' as const }));
 
     const sentimentCounts = { POSITIVE: 0, NEUTRAL: 0, NEGATIVE: 0 };
     for (const r of sentimentResults) {
       sentimentCounts[r.label]++;
     }
 
-    // Topic detection
+    // Topic detection disconnected — will reconnect when feature is used
     let topics: string[] = [];
-    if (allComments.length > 0) {
-      try {
-        topics = await aiService.detectTopics(allComments);
-      } catch {
-        topics = [];
-      }
-    }
 
     // Store sentiment analysis
     await prisma.aIAnalysis.upsert({

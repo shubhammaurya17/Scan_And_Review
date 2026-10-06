@@ -96,6 +96,23 @@ export class GeminiService implements IAIService {
 
   private formatFeedbackBlock(input: ReviewDraftInput): string {
     const lines: string[] = [];
+
+    // SEO context block — location and business description for natural reference
+    const contextParts: string[] = [];
+    if (input.locationArea) {
+      contextParts.push(`Area/Neighborhood: ${input.locationArea}`);
+    }
+    if (input.businessDescription) {
+      contextParts.push(`About this business: ${input.businessDescription}`);
+    }
+    if (contextParts.length > 0) {
+      lines.push('BUSINESS CONTEXT (for natural reference if it fits):');
+      for (const part of contextParts) {
+        lines.push(`- ${part}`);
+      }
+      lines.push('');
+    }
+
     for (const a of input.answers) {
       if (a.questionType === 'STAR_RATING' && a.rating) {
         lines.push(`- ${a.questionText}: ${a.rating}/5 stars`);
@@ -219,6 +236,8 @@ RULES:
 - Do NOT start with the business name
 - NEVER start with "..." or ellipsis — always begin with a complete, natural sentence
 - Use completely fresh vocabulary — never reuse phrasing from any other draft
+- If a BUSINESS CONTEXT section with an Area is provided above, try to mention the area or neighborhood ONCE naturally (e.g. "this place in Koramangala", "near Downtown") — only if it fits the flow. Skip if it sounds forced.
+- Use specific service words for this ${input.categoryName} (e.g. for a Restaurant say "meal", "dishes", "dine-in"; for a Salon say "haircut", "styling") instead of vague words like "experience" or "visit" — use words a real customer would use.
 - Output ONLY the review text, nothing else`;
 
         try {
@@ -238,68 +257,18 @@ RULES:
   }
 
   async generateReply(review: string, businessName: string, tone: string): Promise<string> {
-    const toneInstructions: Record<string, string> = {
-      PROFESSIONAL: 'Keep it professional but warm — like a real business owner who cares, not a corporate PR template.',
-      FRIENDLY: 'Be genuinely friendly and personal — like the owner actually remembers this customer.',
-      GRATEFUL: 'Express real gratitude — be specific about what you appreciate, not just "thanks for the kind words".',
-      APOLOGETIC: 'Acknowledge what went wrong honestly. Don\'t be defensive or make excuses. Show you take it seriously.',
-      CONCISE: 'Keep it short — 2-3 sentences max. Address the key point and move on.',
-    };
-
-    const prompt = `You are the owner of "${businessName}" writing a reply to this Google review:
-
-"${review}"
-
-${toneInstructions[tone] || toneInstructions.PROFESSIONAL}
-
-Write a reply that sounds like a real person — not a chatbot or a marketing team. Address what the reviewer actually said. Keep it under 100 words.
-
-AVOID these patterns that scream "AI-generated":
-- Starting with "Thank you for your [adjective] review/feedback"
-- "We're thrilled/delighted to hear..."
-- "Your feedback is invaluable"
-- "We strive to..."
-- Ending with "We look forward to welcoming you back"
-
-Write only the reply:`;
-
-    const content = await this.generate(prompt, 0.8, 200);
-    return content.trim();
+    // API call disconnected — will reconnect when feature is used
+    return '';
   }
 
   async analyzeSentiment(text: string): Promise<SentimentResult> {
-    const prompt = `Analyze the sentiment of this text and respond with ONLY one word: POSITIVE, NEUTRAL, or NEGATIVE.
-
-Text: "${text}"
-
-Sentiment:`;
-
-    try {
-      const result = await this.generate(prompt, 0.1, 10);
-      const label = result.trim().toUpperCase();
-      if (label.includes('POSITIVE')) return { score: 0.8, label: 'POSITIVE' };
-      if (label.includes('NEGATIVE')) return { score: -0.8, label: 'NEGATIVE' };
-      return { score: 0, label: 'NEUTRAL' };
-    } catch {
-      return { score: 0, label: 'NEUTRAL' };
-    }
+    // Permanently disabled — sentiment section removed from dashboard
+    return { score: 0, label: 'NEUTRAL' };
   }
 
   async detectTopics(texts: string[]): Promise<string[]> {
-    const combined = texts.join('\n---\n');
-    const prompt = `Extract the main topics mentioned across these customer reviews. Return ONLY a comma-separated list of topics (e.g., "food quality, service speed, ambiance").
-
-Reviews:
-${combined}
-
-Topics:`;
-
-    try {
-      const result = await this.generate(prompt, 0.3, 100);
-      return result.split(',').map(t => t.trim()).filter(Boolean);
-    } catch {
-      return [];
-    }
+    // API call disconnected — will reconnect when feature is used
+    return [];
   }
 
   private async generate(prompt: string, temperature: number, maxTokens: number): Promise<string> {

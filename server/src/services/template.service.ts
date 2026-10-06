@@ -161,6 +161,9 @@ export class TemplateService implements IAIService {
       ]);
     }
     if (commentPart) professional += commentPart;
+    if (avgRating >= 4 && input.locationArea) {
+      professional += ` If you're in ${input.locationArea}, this one's worth checking out.`;
+    }
 
     // ─── Friendly ─────────────────────────────────
     let friendly = '';
@@ -227,6 +230,9 @@ export class TemplateService implements IAIService {
       ]);
     }
     if (commentPart) friendly += commentPart;
+    if (avgRating >= 4 && input.locationArea) {
+      friendly += ` If you're around ${input.locationArea}, definitely stop by!`;
+    }
 
     // ─── Heartfelt ────────────────────────────────
     let heartfelt = '';
@@ -296,6 +302,9 @@ export class TemplateService implements IAIService {
       ]);
     }
     if (commentPart) heartfelt += commentPart;
+    if (avgRating >= 4 && input.locationArea) {
+      heartfelt += ` Glad I found this spot in ${input.locationArea}.`;
+    }
 
     return [
       { style: 'PROFESSIONAL', content: professional },

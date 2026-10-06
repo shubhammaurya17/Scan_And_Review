@@ -14,6 +14,8 @@ export interface ReviewDraftInput {
   comment?: string;
   averageRating: number;
   selectedInsights?: string[];
+  locationArea?: string;         // extracted from business address, e.g. "Koramangala"
+  businessDescription?: string;  // business description for service keyword context
 }
 
 export interface GeneratedDraft {

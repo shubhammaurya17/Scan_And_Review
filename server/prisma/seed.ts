@@ -116,16 +116,16 @@ async function main() {
 
   // ─── Insight Templates (10 per category) ─────────────────────────────
   const insightTemplatesByCategory: Record<string, string[]> = {
-    Restaurant: ['Flavorful food', 'Fresh ingredients', 'Generous portions', 'Welcoming staff', 'Cozy ambience', 'Quick service', 'Beautiful presentation', 'Good value', 'Clean restaurant', 'Diverse menu'],
-    Bakery: ['Fresh-baked goods', 'Beautiful pastries', 'Great coffee', 'Unique flavors', 'Fair prices', 'Warm atmosphere', 'Friendly service', 'Good variety', 'Perfect sweetness', 'Lovely packaging'],
-    Boutique: ['Unique finds', 'Quality craftsmanship', 'Helpful styling advice', 'Well-curated selection', 'Welcoming atmosphere', 'Fair pricing', 'Beautiful displays', 'Personal attention', 'Gift-worthy items', 'Easy returns'],
-    Salon: ['Skilled stylist', 'Listened carefully', 'Relaxing atmosphere', 'Clean and tidy', 'On-time appointment', 'Friendly team', 'Good product recommendations', 'Fair pricing', 'Happy with result', 'Comfortable experience'],
-    Hotel: ['Comfortable bed', 'Spotless room', 'Helpful front desk', 'Great breakfast', 'Quiet room', 'Nice amenities', 'Good location', 'Smooth check-in', 'Beautiful decor', 'Responsive staff'],
-    'Dental Office': ['Gentle approach', 'Clear explanations', 'Minimal wait', 'Friendly staff', 'Clean facility', 'Pain-free experience', 'Good follow-up care', 'Modern equipment', 'Calming environment', 'Thorough exam'],
-    'Auto Repair': ['Honest assessment', 'Fair pricing', 'Quick turnaround', 'Clear communication', 'Quality parts used', 'Trustworthy mechanics', 'Convenient location', 'Detailed invoice', 'Problem solved', 'Courtesy updates'],
-    Retail: ['Wide selection', 'Quality products', 'Helpful staff', 'Clean store', 'Easy checkout', 'Good deals', 'Well-organized', 'Easy to find items', 'Fair return policy', 'Friendly greeting'],
-    Physiotherapy: ['Effective treatment', 'Therapist listened', 'Clear exercise guidance', 'Personal attention', 'Noticeable improvement', 'Professional approach', 'Comfortable environment', 'Flexible scheduling', 'Thorough assessment', 'Encouraging attitude'],
-    Gym: ['Great equipment', 'Knowledgeable trainers', 'Clean facility', 'Good class variety', 'Spacious layout', 'Flexible hours', 'Friendly community', 'Fair membership price', 'Well-maintained machines', 'Good ventilation'],
+    Restaurant: ['Flavorful food', 'Fresh ingredients', 'Generous portions', 'Welcoming staff', 'Cozy ambience', 'Quick service', 'Beautiful presentation', 'Good value for money', 'Clean dining area', 'Great for dine-in'],
+    Bakery: ['Fresh-baked goods', 'Beautiful pastries', 'Great coffee pairing', 'Unique flavors', 'Fair prices', 'Warm atmosphere', 'Friendly counter service', 'Good variety', 'Perfect sweetness', 'Nice for takeaway'],
+    Boutique: ['Unique finds', 'Quality craftsmanship', 'Helpful styling advice', 'Well-curated selection', 'Welcoming atmosphere', 'Fair pricing', 'Beautiful store layout', 'Personal attention', 'Gift-worthy items', 'Easy exchange policy'],
+    Salon: ['Skilled stylist', 'Listened carefully', 'Relaxing atmosphere', 'Clean and hygienic', 'On-time appointment', 'Friendly team', 'Good product recommendations', 'Fair pricing', 'Happy with my haircut', 'Walk-in friendly'],
+    Hotel: ['Comfortable bed', 'Spotless room', 'Helpful front desk', 'Great breakfast buffet', 'Quiet room', 'Nice amenities', 'Good location for sightseeing', 'Smooth check-in', 'Beautiful decor', 'Responsive room service'],
+    'Dental Office': ['Gentle approach', 'Clear explanations', 'Minimal wait time', 'Friendly dental staff', 'Clean facility', 'Pain-free cleaning', 'Good follow-up care', 'Modern equipment', 'Calming environment', 'Thorough dental exam'],
+    'Auto Repair': ['Honest assessment', 'Fair pricing', 'Quick turnaround', 'Clear communication', 'Quality parts used', 'Trustworthy mechanics', 'Convenient drop-off', 'Detailed invoice', 'Problem fixed right', 'Courtesy service updates'],
+    Retail: ['Wide selection', 'Quality products', 'Helpful floor staff', 'Clean store', 'Quick checkout', 'Good deals', 'Well-organized aisles', 'Easy to find items', 'Fair return policy', 'Friendly greeting'],
+    Physiotherapy: ['Effective treatment plan', 'Therapist listened', 'Clear exercise guidance', 'Personal attention', 'Noticeable improvement', 'Professional approach', 'Comfortable treatment room', 'Flexible scheduling', 'Thorough initial assessment', 'Encouraging attitude'],
+    Gym: ['Great equipment variety', 'Knowledgeable trainers', 'Clean locker rooms', 'Good class variety', 'Spacious workout area', 'Flexible membership hours', 'Friendly gym community', 'Fair membership price', 'Well-maintained machines', 'Good ventilation'],
   };
 
   const toSlug = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');

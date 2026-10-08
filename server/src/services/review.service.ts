@@ -11,11 +11,17 @@ import crypto from 'crypto';
  * Extract area/neighborhood from a freeform address string.
  * "123 Main Street, Downtown" → "Downtown"
  * "45 MG Road, Koramangala, Bangalore" → "Koramangala"
+ * "XYZ Clinic, HSR Layout, Bangalore, Karnataka 560102" → "HSR Layout"
  * null or single-segment → undefined
+ *
+ * Strips segments that look like a state + pincode / zip (contain a 5-6 digit
+ * number) so the heuristic picks the actual neighborhood, not the postal line.
  */
 function extractArea(address?: string | null): string | undefined {
   if (!address) return undefined;
-  const parts = address.split(',').map(p => p.trim()).filter(Boolean);
+  const raw = address.split(',').map(p => p.trim()).filter(Boolean);
+  // Drop segments that contain a postal / zip code (5-6 consecutive digits)
+  const parts = raw.filter(p => !/\b\d{5,6}\b/.test(p));
   if (parts.length < 2) return undefined;
   return parts.length === 2 ? parts[1] : parts[parts.length - 2];
 }

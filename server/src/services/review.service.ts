@@ -8,33 +8,40 @@ import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 
 /**
+ * Checks whether a segment looks like a street / road / floor / building line
+ * rather than a neighborhood name.
+ * Examples: "13th Main Rd", "45 MG Road", "2nd Floor", "Shop 5", "#42"
+ */
+function isStreetSegment(seg: string): boolean {
+  return /\b(road|rd|street|st|main|cross|lane|floor|block|shop|plot|no\.|#)\b/i.test(seg)
+    || /^\d/.test(seg);                 // starts with a digit → likely a street number / building
+}
+
+/**
  * Extract area/neighborhood from a freeform address string.
  * "123 Main Street, Downtown"                              → "Downtown"
  * "45 MG Road, Koramangala, Bangalore"                     → "Koramangala"
  * "XYZ Clinic, HSR Layout, Bangalore, Karnataka 560102"    → "HSR Layout"
  * "Koramangala, Bengaluru, Karnataka 560102"                → "Koramangala"
+ * "13th Main Rd, Bengaluru, Karnataka 560102"               → undefined (no area)
  * null or single-segment → undefined
  *
- * Strips segments that look like a state + pincode / zip (contain a 5-6 digit
- * number) so the heuristic picks the actual neighborhood, not the postal line.
- * Address segments go most-specific → least-specific (area → city → state),
- * so after stripping postal parts: for 3+ segments pick the second one (index 1);
- * for 2 segments, pick the first if postal parts were stripped (it's the local
- * area), otherwise pick the last (simple "Street, Neighborhood" format).
+ * Strips segments that look like a postal code or a street/road line, then
+ * picks the most local remaining segment as the neighborhood.
+ * After filtering, address segments go local → broad (area → city → country),
+ * so: 2 remaining → first is the area; 3+ → second (skip business / landmark).
  */
 function extractArea(address?: string | null): string | undefined {
   if (!address) return undefined;
   const raw = address.split(',').map(p => p.trim()).filter(Boolean);
   // Drop segments that contain a postal / zip code (5-6 consecutive digits)
-  const parts = raw.filter(p => !/\b\d{5,6}\b/.test(p));
+  const noPincode = raw.filter(p => !/\b\d{5,6}\b/.test(p));
+  // Drop segments that look like a street / road / building line
+  const parts = noPincode.filter(p => !isStreetSegment(p));
   if (parts.length < 2) return undefined;
-  if (parts.length === 2) {
-    // If pincode segments were stripped, first part is the local area;
-    // otherwise it's a simple "Street, Area" format — take the last part.
-    return raw.length > parts.length ? parts[0] : parts[1];
-  }
-  // 3+ segments: second segment (index 1) is typically the area/neighborhood
-  return parts[1];
+  // 2 parts: [area, city] → pick the more local one (first)
+  // 3+ parts: [business/landmark, area, city, ...] → skip first, pick second
+  return parts.length === 2 ? parts[0] : parts[1];
 }
 
 export class ReviewService {

@@ -9,13 +9,18 @@ import crypto from 'crypto';
 
 /**
  * Extract area/neighborhood from a freeform address string.
- * "123 Main Street, Downtown" → "Downtown"
- * "45 MG Road, Koramangala, Bangalore" → "Koramangala"
- * "XYZ Clinic, HSR Layout, Bangalore, Karnataka 560102" → "HSR Layout"
+ * "123 Main Street, Downtown"                              → "Downtown"
+ * "45 MG Road, Koramangala, Bangalore"                     → "Koramangala"
+ * "XYZ Clinic, HSR Layout, Bangalore, Karnataka 560102"    → "HSR Layout"
+ * "Koramangala, Bengaluru, Karnataka 560102"                → "Koramangala"
  * null or single-segment → undefined
  *
  * Strips segments that look like a state + pincode / zip (contain a 5-6 digit
  * number) so the heuristic picks the actual neighborhood, not the postal line.
+ * Address segments go most-specific → least-specific (area → city → state),
+ * so after stripping postal parts: for 3+ segments pick the second one (index 1);
+ * for 2 segments, pick the first if postal parts were stripped (it's the local
+ * area), otherwise pick the last (simple "Street, Neighborhood" format).
  */
 function extractArea(address?: string | null): string | undefined {
   if (!address) return undefined;
@@ -23,7 +28,13 @@ function extractArea(address?: string | null): string | undefined {
   // Drop segments that contain a postal / zip code (5-6 consecutive digits)
   const parts = raw.filter(p => !/\b\d{5,6}\b/.test(p));
   if (parts.length < 2) return undefined;
-  return parts.length === 2 ? parts[1] : parts[parts.length - 2];
+  if (parts.length === 2) {
+    // If pincode segments were stripped, first part is the local area;
+    // otherwise it's a simple "Street, Area" format — take the last part.
+    return raw.length > parts.length ? parts[0] : parts[1];
+  }
+  // 3+ segments: second segment (index 1) is typically the area/neighborhood
+  return parts[1];
 }
 
 export class ReviewService {
